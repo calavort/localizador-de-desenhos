@@ -296,7 +296,7 @@ if ($dialogo.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $seleci
     FILE_SEARCH_LIMIT = 300
 
     def start_file_search(self, folder: str, query: str, suffixes: str = "",
-                          inside_content: bool = False) -> dict:
+                          inside_content: bool = False, mode: str = "contem") -> dict:
         root = Path(str(folder).strip())
         if not root.is_dir():
             return {"ok": False, "message": "A pasta informada nao existe ou nao esta acessivel."}
@@ -316,11 +316,13 @@ if ($dialogo.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $seleci
         stop = self.file_stop
         limite = self.FILE_SEARCH_LIMIT
 
+        exata = str(mode).strip().casefold() == "exata"
+
         def varrer() -> None:
             achados = 0
             try:
                 for tipo, dado in iter_file_matches(root, terms, parse_suffixes(suffixes),
-                                                    True, bool(inside_content), stop, limite):
+                                                    True, bool(inside_content), stop, limite, exata):
                     with self.file_lock:
                         if tipo == "achado":
                             self.file_hits.append(dado)

@@ -108,8 +108,11 @@ def parse_suffixes(value: str) -> set[str]:
     return suffixes
 
 
-def name_matches(name: str, terms: list[str]) -> bool:
+def name_matches(name: str, terms: list[str], exact: bool = False) -> bool:
+    """Contem: todos os termos aparecem. Exata: o nome e exatamente o texto."""
     normalized = normalize(name)
+    if exact:
+        return normalized == "".join(terms)
     return all(term in normalized for term in terms)
 
 
@@ -156,7 +159,7 @@ def content_matches(path: Path, terms: list[str]) -> bool:
 
 
 def iter_file_matches(root: Path, terms, suffixes, include_folders: bool,
-                      inside_content: bool, stop, limit: int):
+                      inside_content: bool, stop, limit: int, exact: bool = False):
     """Percorre a pasta e entrega cada achado assim que encontra.
 
     Devolve tuplas ("achado", dados) e ("progresso", total_visitado), para a
@@ -174,7 +177,7 @@ def iter_file_matches(root: Path, terms, suffixes, include_folders: bool,
             for nome in pastas:
                 if stop.is_set() or encontrados >= limit:
                     return
-                if name_matches(nome, terms):
+                if name_matches(nome, terms, exact):
                     encontrados += 1
                     yield "achado", describe_entry(pasta_atual / nome, True)
 
@@ -189,7 +192,8 @@ def iter_file_matches(root: Path, terms, suffixes, include_folders: bool,
             caminho = pasta_atual / nome
             if suffixes and caminho.suffix.casefold() not in suffixes:
                 continue
-            achou = name_matches(nome, terms)
+            # Exata compara sem a extensao: "deck plate" acha "DECK PLATE.dwg".
+            achou = name_matches(caminho.stem if exact else nome, terms, exact)
             if not achou and inside_content:
                 achou = content_matches(caminho, terms)
             if achou:
