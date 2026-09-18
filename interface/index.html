@@ -129,7 +129,10 @@ function perguntar(texto,titulo='Atualização',rotuloSim='Confirmar'){
   $('#askYes').onclick=()=>encerrar(true);$('#askNo').onclick=()=>encerrar(false);
   $('#askBack').onclick=(e)=>{if(e.target===$('#askBack'))encerrar(false)};
   document.addEventListener('keydown',porTecla)})}
-async function installUpdate(){if(!updateAvailable)return;if(!await perguntar('Baixar e instalar a atualização agora? O programa será reiniciado.','Atualizar programa','Atualizar'))return;$('#checkUpdate').disabled=true;$('#installUpdate').disabled=true;$('#updateStatus').textContent='Baixando e preparando a atualização...';const response=await api().install_update();$('#updateStatus').textContent=response.message;if(!response.ok){$('#checkUpdate').disabled=false;$('#installUpdate').disabled=false}}
+async function installUpdate(){if(!updateAvailable)return;if(!await perguntar('Baixar e instalar a atualização agora? O programa será reiniciado.','Atualizar programa','Atualizar'))return;$('#checkUpdate').disabled=true;$('#installUpdate').disabled=true;$('#updateStatus').textContent='Baixando e preparando a atualização...';const response=await api().install_update();$('#updateStatus').textContent=response.message;if(!response.ok){$('#checkUpdate').disabled=false;$('#installUpdate').disabled=false}
+ /* Versão que mexe nas bibliotecas: o pacote já foi baixado para a pasta,
+    então o botão de instalar a mão aparece logo abaixo, sem novo download. */
+ if(response.needsManual)conferirPacoteLocal()}
 
 window.addEventListener('pywebviewready',async()=>{const response=await api().ready();$('#root').value=response.root;if(response.searchRoot)$('#sRoot').value=response.searchRoot;$('#updateVersion').textContent=response.version;setPinState(response.topmost);status('Pronto para pesquisar');conferirPacoteLocal()});
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>switchTab(button.dataset.tab)));

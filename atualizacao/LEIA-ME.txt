@@ -10,4 +10,8 @@ Depois abra o programa, va na guia ATUALIZACAO e clique em
 Quando a versao nova mudar as bibliotecas, o programa avisa na tela:
 nesse caso, rode o "Instalar Bibliotecas.bat" depois de instalar.
 
+Voce nem sempre precisa baixar a mao: se o botao "Atualizar" encontrar
+uma versao que muda as bibliotecas, ele baixa o pacote para esta pasta
+sozinho e avisa. Ai e so clicar em "Instalar pacote" e rodar o .bat.
+
 Nada mais precisa ser feito. Esta pasta pode ficar vazia.

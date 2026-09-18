@@ -288,6 +288,21 @@ class UpdateService:
             digest = sha256_file(package)
             if not re.fullmatch(r"[0-9a-f]{64}", expected) or digest != expected:
                 raise UpdateError("Falha na verificacao SHA-256. Nenhum arquivo foi alterado.")
+            # Versao que muda bibliotecas nao pode ser instalada por aqui (o
+            # instalador nao roda pip). Em vez de so recusar, o pacote ja
+            # conferido vai para a pasta atualizacao/, e o usuario termina em
+            # dois cliques em vez de ter que baixar tudo de novo a mao.
+            if self._changes_requirements(package):
+                destino = self.manual_folder() / package_name
+                destino.unlink(missing_ok=True)  # clicar em Atualizar de novo nao pode falhar
+                shutil.move(str(package), str(destino))
+                return {
+                    "ok": False,
+                    "needsManual": True,
+                    "message": (f"A versao {latest} muda as bibliotecas. O pacote foi baixado para a "
+                                "pasta atualizacao: use 'Instalar pacote' abaixo e depois rode o "
+                                "Instalar Bibliotecas.bat."),
+                }
             validate_package(package, self.version_info, latest)
             installer = state / "instalador.py"
             shutil.copy2(self.root / "instalador.py", installer)
