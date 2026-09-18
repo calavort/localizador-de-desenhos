@@ -117,14 +117,69 @@ class Backend:
             environment = os.environ.copy()
             environment["LOCALIZADOR_RESULTADO"] = str(result_file)
             environment["LOCALIZADOR_INICIAL"] = initial
+            # Seletor de pasta no estilo do Explorer (IFileOpenDialog com
+            # FOS_PICKFOLDERS). O FolderBrowserDialog do .NET Framework, usado
+            # antes, abre a arvorezinha antiga do Windows XP.
             script = r"""
-Add-Type -AssemblyName System.Windows.Forms
-$dialogo = New-Object System.Windows.Forms.FolderBrowserDialog
-$dialogo.Description = 'Selecione a pasta de busca'
-$dialogo.ShowNewFolderButton = $true
-if (Test-Path -LiteralPath $env:LOCALIZADOR_INICIAL) { $dialogo.SelectedPath = $env:LOCALIZADOR_INICIAL }
-$selecionada = ''
-if ($dialogo.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $selecionada = $dialogo.SelectedPath }
+Add-Type -Language CSharp -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+public static class PastaModerna {
+  [ComImport, Guid("42f85136-db7e-439c-85f1-e4075d135fc8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IFileDialog {
+    [PreserveSig] int Show(IntPtr parent);
+    void SetFileTypes(uint c, IntPtr rg); void SetFileTypeIndex(uint i); void GetFileTypeIndex(out uint i);
+    void Advise(IntPtr p, out uint c); void Unadvise(uint c);
+    void SetOptions(uint fos); void GetOptions(out uint fos);
+    void SetDefaultFolder(IShellItem si); void SetFolder(IShellItem si);
+    void GetFolder(out IShellItem si); void GetCurrentSelection(out IShellItem si);
+    void SetFileName([MarshalAs(UnmanagedType.LPWStr)] string n);
+    void GetFileName([MarshalAs(UnmanagedType.LPWStr)] out string n);
+    void SetTitle([MarshalAs(UnmanagedType.LPWStr)] string t);
+    void SetOkButtonLabel([MarshalAs(UnmanagedType.LPWStr)] string t);
+    void SetFileNameLabel([MarshalAs(UnmanagedType.LPWStr)] string t);
+    void GetResult(out IShellItem si);
+    void AddPlace(IShellItem si, int alignment); void SetDefaultExtension([MarshalAs(UnmanagedType.LPWStr)] string e);
+    void Close(int hr); void SetClientGuid(ref Guid g); void ClearClientData(); void SetFilter(IntPtr f);
+  }
+  [ComImport, Guid("43826d1e-e718-42ee-bc55-a1e261c37bfe"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IShellItem {
+    void BindToHandler(IntPtr bc, ref Guid bhid, ref Guid riid, out IntPtr ppv);
+    void GetParent(out IShellItem si);
+    void GetDisplayName(uint sigdn, [MarshalAs(UnmanagedType.LPWStr)] out string name);
+    void GetAttributes(uint mask, out uint attrs);
+    void Compare(IShellItem si, uint hint, out int order);
+  }
+  [ComImport, Guid("DC1C5A9C-E88A-4dde-A5A1-60F82A20AEF7")] class FileOpenDialog { }
+
+  [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
+  static extern void SHCreateItemFromParsingName(string path, IntPtr bc, ref Guid riid,
+    [MarshalAs(UnmanagedType.Interface)] out IShellItem item);
+
+  const uint FOS_PICKFOLDERS = 0x20, FOS_FORCEFILESYSTEM = 0x40, FOS_NOCHANGEDIR = 0x8;
+  const uint SIGDN_FILESYSPATH = 0x80058000;
+
+  public static string Escolher(string titulo, string inicial) {
+    IFileDialog dialogo = (IFileDialog)new FileOpenDialog();
+    uint opcoes; dialogo.GetOptions(out opcoes);
+    dialogo.SetOptions(opcoes | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_NOCHANGEDIR);
+    if (!string.IsNullOrEmpty(titulo)) dialogo.SetTitle(titulo);
+    if (!string.IsNullOrEmpty(inicial) && System.IO.Directory.Exists(inicial)) {
+      try {
+        Guid iid = typeof(IShellItem).GUID; IShellItem item;
+        SHCreateItemFromParsingName(inicial, IntPtr.Zero, ref iid, out item);
+        dialogo.SetFolder(item);
+      } catch { }
+    }
+    if (dialogo.Show(IntPtr.Zero) != 0) return "";
+    IShellItem escolhido; dialogo.GetResult(out escolhido);
+    string caminho; escolhido.GetDisplayName(SIGDN_FILESYSPATH, out caminho);
+    return caminho ?? "";
+  }
+}
+'@
+$selecionada = [PastaModerna]::Escolher('Selecione a pasta de busca', $env:LOCALIZADOR_INICIAL)
 [System.IO.File]::WriteAllText($env:LOCALIZADOR_RESULTADO, $selecionada, [System.Text.UTF8Encoding]::new($false))
 """
             completed = subprocess.run(

@@ -20,6 +20,15 @@ input{height:30px;border:1px solid #c8c6c4;border-radius:4px;background:#fff;pad
 .result-footer{min-height:42px;padding:7px 10px;border-top:1px solid var(--light-line);display:flex;align-items:center;justify-content:flex-end;flex:none}.clear-results{height:27px;padding:0 14px;border:1px solid #c8c6c4;border-radius:4px;background:#fff;color:var(--text);font-size:11px;font-weight:600;cursor:pointer}.clear-results:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}.clear-results:disabled{opacity:.45;cursor:default;background:#fff;border-color:#c8c6c4;color:var(--muted)}
 .specific-panel{position:relative}.specific-panel .disabled-content{display:flex;flex-direction:column;gap:12px;min-height:0;flex:1;opacity:.55;pointer-events:none}.specific-note{position:absolute;left:50%;top:50%;z-index:2;transform:translate(-50%,-50%);width:260px;padding:14px 18px;border:1px solid var(--line);border-radius:6px;background:rgba(255,255,255,.96);box-shadow:0 3px 10px rgba(0,0,0,.08);text-align:center;font-size:12px;color:var(--muted)}
 .filter-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}.filter-field{min-width:0}.filter-field input{width:100%}.filter-check{display:flex;align-items:center;gap:6px;height:30px;font-size:11.5px;color:var(--muted);cursor:pointer;white-space:nowrap}.filter-check input{width:14px;height:14px;accent-color:var(--accent);margin:0}.scan-info{margin-right:auto;font-size:11px;color:var(--muted)}.hit{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;padding:7px 11px;border-bottom:1px solid var(--light-line);cursor:pointer}.hit:last-child{border-bottom:0}.hit:hover,.hit:focus-visible{background:#f3f8f7;outline:0}.hit-icon{width:17px;height:17px;color:var(--accent);flex:none}.hit-main{min-width:0}.hit-name{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hit-path{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hit-open{height:24px;padding:0 9px;border:1px solid var(--accent);border-radius:4px;background:#fff;color:var(--accent);font-size:10.5px;font-weight:600;cursor:pointer}.hit-open:hover{background:var(--accent-soft)}.update-card{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px;display:flex;flex-direction:column;gap:13px}.update-heading{display:flex;align-items:center;gap:11px}.update-icon{width:34px;height:34px;border-radius:5px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}.update-icon svg{width:20px;height:20px}.update-heading h2{font-size:15px;margin:0}.update-heading p{font-size:11px;color:var(--muted);margin:2px 0 0}.update-version{font-size:12px}.update-status{min-height:38px;padding:10px 12px;border:1px solid var(--light-line);border-radius:4px;background:#fafafa;color:var(--muted);font-size:11.5px;display:flex;align-items:center}.update-actions{display:flex;gap:8px}.manual-box{border-top:1px solid var(--light-line);padding-top:12px;display:flex;flex-direction:column;gap:9px}.manual-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px}.busy{opacity:.65;pointer-events:none}
+.credito{border-top:1px solid var(--light-line);padding-top:11px;text-align:center;font-size:10.5px;color:var(--muted)}
+/* Aviso no estilo do programa, centrado na janela, no lugar do confirm() do
+   navegador (que aparece como "Esta pagina diz" e nao tem a cara do app). */
+.ask-back{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(0,0,0,.28)}
+.ask-back[hidden]{display:none}
+.ask-box{width:min(330px,88%);padding:16px 18px 14px;border:1px solid var(--line);border-radius:6px;background:#fff;box-shadow:0 8px 26px rgba(0,0,0,.20)}
+.ask-title{margin:0 0 6px;font-size:13.5px;font-weight:600}
+.ask-text{margin:0;font-size:11.5px;color:var(--muted);line-height:1.5}
+.ask-actions{margin-top:16px;display:flex;justify-content:flex-end;gap:8px}
 /* A guia rola quando o cartao nao cabe, em vez de invadir a barra de baixo. */
 #panel-atualizacao{overflow:auto}#panel-atualizacao .update-card{flex:none}
 /* Modo de comparacao do nome, dentro do proprio campo de busca. */
@@ -68,16 +77,27 @@ input{height:30px;border:1px solid #c8c6c4;border-radius:4px;background:#fff;pad
 
     <section class="tab-panel" id="panel-atualizacao" role="tabpanel">
       <div class="update-card">
-        <div class="update-heading"><div class="update-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 8.2A7 7 0 0 1 18.5 7L20 12M4 12l1.5 5a7 7 0 0 0 12.4-1.2"/></svg></div><div><h2>Atualização do programa</h2><p>Canal seguro pelo GitHub Releases</p></div></div>
+        <div class="update-heading"><div class="update-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v9"/><path d="m8.5 9.5 3.5 3.5 3.5-3.5"/><path d="M5 15v3.5h14V15"/></svg></div><div><h2>Atualização do programa</h2><p>Canal seguro pelo GitHub Releases</p></div></div>
         <div class="update-version">Versão instalada: <strong id="updateVersion">—</strong></div>
         <div class="update-status" id="updateStatus" role="status">Aguardando verificação.</div>
         <div class="update-actions"><button class="secondary" id="checkUpdate">Verificar</button><button class="primary" id="installUpdate" disabled>Atualizar</button></div>
-        <div class="manual-box"><div class="manual-head"><strong>Pacote na pasta</strong><button class="secondary" id="openManualFolder">Abrir pasta</button></div><div class="update-status" id="manualStatus">Procurando pacote...</div><div class="update-actions"><button class="secondary" id="rescanManual">Reconferir</button><button class="primary" id="installManual" hidden>Instalar pacote</button></div></div>
+        <div class="manual-box"><div class="manual-head"><strong>Pacote na pasta</strong><button class="secondary" id="openManualFolder">Abrir pasta</button></div><div class="update-status" id="manualStatus">Procurando pacote...</div><div class="update-actions"><button class="secondary" id="rescanManual">Reconferir</button><button class="primary" id="installManual" hidden>Instalar pacote</button></div></div><div class="credito">Programa desenvolvido por Edflávio Calavort — 2026</div>
       </div>
     </section>
   </main>
 
   <footer class="status"><span id="status">Pronto</span></footer>
+
+  <div class="ask-back" id="askBack" hidden>
+    <section class="ask-box" role="dialog" aria-modal="true" aria-labelledby="askTitle">
+      <h2 class="ask-title" id="askTitle">Atualização</h2>
+      <p class="ask-text" id="askText"></p>
+      <div class="ask-actions">
+        <button class="secondary" id="askNo" type="button">Cancelar</button>
+        <button class="primary" id="askYes" type="button">Confirmar</button>
+      </div>
+    </section>
+  </div>
 </div>
 
 <script>
@@ -97,7 +117,19 @@ async function openPdf(index){const response=await api().open_result(Number(inde
 async function openDwg(resultIndex,dwgIndex){const response=await api().open_dwg(Number(resultIndex),Number(dwgIndex));status(response.ok?'DWG aberto':response.message)}
 function toggleDwgs(button){const list=$(`.dwg-list[data-i="${button.dataset.i}"]`);const expanded=button.getAttribute('aria-expanded')!=='true';button.setAttribute('aria-expanded',String(expanded));button.setAttribute('aria-label',expanded?'Recolher arquivos DWG':'Exibir arquivos DWG');button.classList.toggle('is-open',expanded);list.hidden=!expanded}
 async function checkForUpdate(){const check=$('#checkUpdate');const install=$('#installUpdate');check.disabled=true;install.disabled=true;$('#updateStatus').textContent='Verificando atualizações...';const response=await api().check_update();check.disabled=false;updateAvailable=Boolean(response.ok&&response.available);install.disabled=!updateAvailable;$('#updateStatus').textContent=response.message;if(response.version)install.textContent=`Atualizar para ${response.version}`}
-async function installUpdate(){if(!updateAvailable)return;if(!confirm('Deseja baixar e instalar a atualização agora?'))return;$('#checkUpdate').disabled=true;$('#installUpdate').disabled=true;$('#updateStatus').textContent='Baixando e preparando a atualização...';const response=await api().install_update();$('#updateStatus').textContent=response.message;if(!response.ok){$('#checkUpdate').disabled=false;$('#installUpdate').disabled=false}}
+/* Pergunta no estilo do programa, centrada na janela. Devolve uma promessa
+   com true/false, igual ao confirm(), mas sem o quadro do navegador. */
+function perguntar(texto,titulo='Atualização',rotuloSim='Confirmar'){
+ return new Promise(resolve=>{
+  $('#askTitle').textContent=titulo;$('#askText').textContent=texto;$('#askYes').textContent=rotuloSim;
+  $('#askBack').hidden=false;$('#askYes').focus();
+  const encerrar=(valor)=>{$('#askBack').hidden=true;$('#askYes').onclick=null;$('#askNo').onclick=null;
+   $('#askBack').onclick=null;document.removeEventListener('keydown',porTecla);resolve(valor)};
+  const porTecla=(e)=>{if(e.key==='Escape')encerrar(false);if(e.key==='Enter')encerrar(true)};
+  $('#askYes').onclick=()=>encerrar(true);$('#askNo').onclick=()=>encerrar(false);
+  $('#askBack').onclick=(e)=>{if(e.target===$('#askBack'))encerrar(false)};
+  document.addEventListener('keydown',porTecla)})}
+async function installUpdate(){if(!updateAvailable)return;if(!await perguntar('Baixar e instalar a atualização agora? O programa será reiniciado.','Atualizar programa','Atualizar'))return;$('#checkUpdate').disabled=true;$('#installUpdate').disabled=true;$('#updateStatus').textContent='Baixando e preparando a atualização...';const response=await api().install_update();$('#updateStatus').textContent=response.message;if(!response.ok){$('#checkUpdate').disabled=false;$('#installUpdate').disabled=false}}
 
 window.addEventListener('pywebviewready',async()=>{const response=await api().ready();$('#root').value=response.root;$('#updateVersion').textContent=response.version;setPinState(response.topmost);status('Pronto para pesquisar');conferirPacoteLocal()});
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>switchTab(button.dataset.tab)));
@@ -162,7 +194,7 @@ $('#openManualFolder').onclick=async()=>{const r=await api().open_manual_folder(
 $('#installManual').onclick=async()=>{
  const mudaLibs=$('#installManual').dataset.libs==='1';
  const aviso=mudaLibs?'Esta versão muda as bibliotecas. Depois de instalar, rode o Instalar Bibliotecas.bat antes de abrir o programa. Instalar agora?':'Instalar o pacote da pasta agora?';
- if(!confirm(aviso))return;
+ if(!await perguntar(aviso,'Instalar pacote da pasta','Instalar'))return;
  $('#installManual').disabled=true;
  const r=await api().install_manual_update();
  $('#manualStatus').textContent=r.message;status(r.message);

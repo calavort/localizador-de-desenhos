@@ -46,8 +46,8 @@ def main() -> None:
         url=interface.as_uri(),
         js_api=backend,
         width=620,
-        height=520,
-        min_size=(620, 520),
+        height=572,   # 10% mais alta que os 520 de antes
+        min_size=(620, 572),
         resizable=True,
         on_top=bool(backend.settings["topmost"]),
         shadow=True,
@@ -69,7 +69,7 @@ def main() -> None:
                     window.native.ShowIcon = True
                     window._localizador_icon = native_icon
                 locked_width = window.native.Width
-                window.native.MinimumSize = Size(locked_width, 520)
+                window.native.MinimumSize = Size(locked_width, 572)
                 window.native.MaximumSize = Size(locked_width, 32767)
                 window.native.MaximizeBox = False
                 handle = window.native.Handle
