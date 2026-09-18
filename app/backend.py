@@ -40,7 +40,9 @@ class Backend:
         self.file_terms: list[str] = []
 
     def _load_settings(self) -> dict:
-        settings = {"drawing_root": DEFAULT_ROOT, "topmost": True}
+        # search_root e a pasta da guia Especifica: fica separada da pasta dos
+        # desenhos, senao escolher uma trocaria a outra sem querer.
+        settings = {"drawing_root": DEFAULT_ROOT, "topmost": True, "search_root": ""}
         try:
             saved = json.loads(self.config_file.read_text(encoding="utf-8"))
             if isinstance(saved, dict):
@@ -59,6 +61,7 @@ class Backend:
         return {
             "ok": True,
             "root": self.settings["drawing_root"],
+            "searchRoot": self.settings.get("search_root", ""),
             "version": self.updates.version,
             "topmost": bool(self.settings["topmost"]),
         }
@@ -212,8 +215,11 @@ $selecionada = [PastaModerna]::Escolher('Selecione a pasta de busca', $env:LOCAL
         except Exception:
             return ""
 
-    def choose_folder(self) -> dict:
-        initial = str(self.settings["drawing_root"])
+    def choose_folder(self, target: str = "drawing_root") -> dict:
+        """target diz qual pasta esta sendo escolhida: a dos desenhos (guia
+        Geral) ou a da busca livre (guia Especifica)."""
+        chave = "search_root" if str(target) == "search_root" else "drawing_root"
+        initial = str(self.settings.get(chave) or self.settings["drawing_root"])
         selected: str | None = None
         restore_topmost = bool(self.settings["topmost"])
         if os.name == "nt":
@@ -229,7 +235,7 @@ $selecionada = [PastaModerna]::Escolher('Selecione a pasta de busca', $env:LOCAL
         folder = Path(selected)
         if not folder.is_dir():
             return {"ok": False, "selected": False, "root": initial, "message": "A pasta selecionada nao esta acessivel."}
-        self.settings["drawing_root"] = str(folder)
+        self.settings[chave] = str(folder)
         self._save_settings()
         return {"ok": True, "selected": True, "root": str(folder), "message": "Pasta registrada."}
 
@@ -361,6 +367,10 @@ $selecionada = [PastaModerna]::Escolher('Selecione a pasta de busca', $env:LOCAL
         terms = split_terms(query)
         if not terms:
             return {"ok": False, "message": "Digite parte do nome do arquivo."}
+        # Guarda a pasta usada: na proxima abertura ela ja vem preenchida.
+        if self.settings.get("search_root") != str(root):
+            self.settings["search_root"] = str(root)
+            self._save_settings()
 
         self.cancel_file_search()
         self.file_stop = threading.Event()

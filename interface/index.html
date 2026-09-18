@@ -131,7 +131,7 @@ function perguntar(texto,titulo='Atualização',rotuloSim='Confirmar'){
   document.addEventListener('keydown',porTecla)})}
 async function installUpdate(){if(!updateAvailable)return;if(!await perguntar('Baixar e instalar a atualização agora? O programa será reiniciado.','Atualizar programa','Atualizar'))return;$('#checkUpdate').disabled=true;$('#installUpdate').disabled=true;$('#updateStatus').textContent='Baixando e preparando a atualização...';const response=await api().install_update();$('#updateStatus').textContent=response.message;if(!response.ok){$('#checkUpdate').disabled=false;$('#installUpdate').disabled=false}}
 
-window.addEventListener('pywebviewready',async()=>{const response=await api().ready();$('#root').value=response.root;$('#updateVersion').textContent=response.version;setPinState(response.topmost);status('Pronto para pesquisar');conferirPacoteLocal()});
+window.addEventListener('pywebviewready',async()=>{const response=await api().ready();$('#root').value=response.root;if(response.searchRoot)$('#sRoot').value=response.searchRoot;$('#updateVersion').textContent=response.version;setPinState(response.topmost);status('Pronto para pesquisar');conferirPacoteLocal()});
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>switchTab(button.dataset.tab)));
 $('#browse').onclick=async()=>{const button=$('#browse');button.disabled=true;status('Selecione a pasta de busca...');try{const response=await api().choose_folder();if(response.root)$('#root').value=response.root;status(response.message||(response.selected?'Pasta registrada':'Seleção cancelada'))}catch(error){status('Não foi possível abrir o seletor de pastas.')}finally{button.disabled=false}};
 $('#root').addEventListener('change',async()=>{const response=await api().set_root($('#root').value);if(!response.ok){status(response.message)}else{$('#root').value=response.root;status('Pasta registrada')}});
@@ -178,7 +178,9 @@ $('#sSearch').onclick=iniciarBusca;
 $('#sQuery').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarBusca()});
 $('#sCancel').onclick=async()=>{await api().cancel_file_search();status('Busca cancelada')};
 $('#sClear').onclick=()=>{$('#sResults').innerHTML='<div class="empty"><div>Escolha a pasta e digite parte do nome.</div></div>';$('#sInfo').textContent='';sSeen=0;$('#sClear').disabled=true;$('#sQuery').focus()};
-$('#sBrowse').onclick=async()=>{const r=await api().choose_folder();if(r.ok&&r.root)$('#sRoot').value=r.root};
+$('#sBrowse').onclick=async()=>{const b=$('#sBrowse');b.disabled=true;status('Selecione a pasta de busca...');
+ try{const r=await api().choose_folder('search_root');if(r.ok&&r.selected&&r.root)$('#sRoot').value=r.root;
+  status(r.message||'Seleção cancelada')}catch(e){status('Não foi possível abrir o seletor de pastas.')}finally{b.disabled=false}};
 $('#sResults').addEventListener('click',async event=>{const botao=event.target.closest('.hit-open');const linha=event.target.closest('.hit');if(!linha&&!botao)return;
  const alvo=botao||linha;const r=await api().open_file_hit(alvo.dataset.path,!!botao);status(r.ok?(botao?'Pasta aberta':'Item aberto'):r.message)});
 $('#sResults').addEventListener('keydown',async event=>{const linha=event.target.closest('.hit');if(linha&&(event.key==='Enter'||event.key===' ')){event.preventDefault();const r=await api().open_file_hit(linha.dataset.path,false);status(r.ok?'Item aberto':r.message)}});
