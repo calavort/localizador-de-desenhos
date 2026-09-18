@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import threading
 
 from .search_service import find_latest_pdfs
@@ -24,7 +25,7 @@ class Backend:
         self.result_folders: list[Path] = []
         self.result_dwgs: list[list[Path]] = []
         self.result_data: list[dict] = []
-        self.config_dir = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Localizador de Desenhos"
+        self.config_dir = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Localizador de arquivo"
         self.config_file = self.config_dir / "configuracoes.json"
         self.settings = self._load_settings()
         self.updates = UpdateService(app_root)
@@ -90,14 +91,83 @@ class Backend:
         self._save_settings()
         return {"ok": True, "topmost": enabled, "applied": self._apply_topmost(enabled)}
 
+    @staticmethod
+    def _powershell_executable() -> str:
+        system_root = os.environ.get("SystemRoot", r"C:\Windows")
+        candidate = Path(system_root) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+        return str(candidate) if candidate.is_file() else "powershell.exe"
+
+    @staticmethod
+    def _hidden_creation_flags() -> int:
+        return getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000) if os.name == "nt" else 0
+
+    def _powershell_folder_dialog(self, initial: str) -> str | None:
+        initial = initial if Path(initial).is_dir() else str(Path.home())
+        with tempfile.TemporaryDirectory(prefix="localizador_pasta_") as temporary:
+            result_file = Path(temporary) / "pasta.txt"
+            environment = os.environ.copy()
+            environment["LOCALIZADOR_RESULTADO"] = str(result_file)
+            environment["LOCALIZADOR_INICIAL"] = initial
+            script = r"""
+Add-Type -AssemblyName System.Windows.Forms
+$dialogo = New-Object System.Windows.Forms.FolderBrowserDialog
+$dialogo.Description = 'Selecione a pasta de busca'
+$dialogo.ShowNewFolderButton = $true
+if (Test-Path -LiteralPath $env:LOCALIZADOR_INICIAL) { $dialogo.SelectedPath = $env:LOCALIZADOR_INICIAL }
+$selecionada = ''
+if ($dialogo.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $selecionada = $dialogo.SelectedPath }
+[System.IO.File]::WriteAllText($env:LOCALIZADOR_RESULTADO, $selecionada, [System.Text.UTF8Encoding]::new($false))
+"""
+            completed = subprocess.run(
+                [self._powershell_executable(), "-NoLogo", "-NoProfile", "-STA", "-Command", script],
+                env=environment,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=self._hidden_creation_flags(),
+                timeout=3600,
+                check=False,
+            )
+            if completed.returncode != 0 or not result_file.is_file():
+                return None
+            return result_file.read_text(encoding="utf-8-sig").strip()
+
+    def _pywebview_folder_dialog(self, initial: str) -> str:
+        if self.window is None:
+            return ""
+        try:
+            import webview
+
+            selected = self.window.create_file_dialog(
+                webview.FileDialog.FOLDER,
+                directory=initial if Path(initial).is_dir() else str(Path.home()),
+            )
+            if not selected:
+                return ""
+            return str(selected[0] if isinstance(selected, (list, tuple)) else selected)
+        except Exception:
+            return ""
+
     def choose_folder(self) -> dict:
-        import webview
-        selected = self.window.create_file_dialog(webview.FileDialog.FOLDER, directory=self.settings["drawing_root"])
-        if selected:
-            value = selected[0] if isinstance(selected, (list, tuple)) else selected
-            self.settings["drawing_root"] = str(value)
-            self._save_settings()
-        return {"ok": True, "root": self.settings["drawing_root"]}
+        initial = str(self.settings["drawing_root"])
+        selected: str | None = None
+        restore_topmost = bool(self.settings["topmost"])
+        if os.name == "nt":
+            self._apply_topmost(False)
+            try:
+                selected = self._powershell_folder_dialog(initial)
+            finally:
+                self._apply_topmost(restore_topmost)
+        if selected is None:
+            selected = self._pywebview_folder_dialog(initial)
+        if not selected:
+            return {"ok": True, "selected": False, "root": initial, "message": "Selecao cancelada."}
+        folder = Path(selected)
+        if not folder.is_dir():
+            return {"ok": False, "selected": False, "root": initial, "message": "A pasta selecionada nao esta acessivel."}
+        self.settings["drawing_root"] = str(folder)
+        self._save_settings()
+        return {"ok": True, "selected": True, "root": str(folder), "message": "Pasta registrada."}
 
     def set_root(self, value: str) -> dict:
         folder = Path(str(value).strip())

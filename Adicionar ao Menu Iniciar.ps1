@@ -2,7 +2,8 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Programs = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
-$ShortcutPath = Join-Path $Programs 'Localizador de Desenhos.lnk'
+$ShortcutPath = Join-Path $Programs 'Localizador de arquivo.lnk'
+$LegacyShortcutPath = Join-Path $Programs 'Localizador de Desenhos.lnk'
 $PythonExe = $null
 foreach ($Candidate in @('py.exe', 'python.exe')) {
     $Command = Get-Command $Candidate -ErrorAction SilentlyContinue
@@ -28,6 +29,7 @@ $Shortcut.Arguments = '"' + (Join-Path $Root 'Localizador_Desenhos.pyw') + '"'
 $Shortcut.WorkingDirectory = $Root
 $Icon = Join-Path $Root 'interface\localizador.ico'
 if (Test-Path $Icon) { $Shortcut.IconLocation = $Icon + ',0' }
-$Shortcut.Description = 'Localiza e abre o PDF da ultima revisao de um desenho.'
+$Shortcut.Description = 'Localiza e abre arquivos PDF e DWG de um desenho.'
 $Shortcut.Save()
-[System.Windows.Forms.MessageBox]::Show('Atalho adicionado ao Menu Iniciar.', 'Localizador de Desenhos') | Out-Null
+if (Test-Path -LiteralPath $LegacyShortcutPath) { Remove-Item -LiteralPath $LegacyShortcutPath -Force }
+[System.Windows.Forms.MessageBox]::Show('Atalho adicionado ao Menu Iniciar.', 'Localizador de arquivo') | Out-Null

@@ -54,7 +54,7 @@ def build_package(root: Path, version: str | None = None, output_dir: Path | Non
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Gera o pacote seguro do Localizador de Desenhos.")
+    parser = argparse.ArgumentParser(description="Gera o pacote seguro do Localizador de arquivo.")
     parser.add_argument("--versao", help="Nova versao no formato X.Y.Z")
     parser.add_argument("--saida", type=Path, help="Pasta de saida")
     args = parser.parse_args()

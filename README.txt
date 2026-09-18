@@ -1,4 +1,4 @@
-LOCALIZADOR DE DESENHOS - v1.0.2
+LOCALIZADOR DE ARQUIVO - v1.0.2
 ================================
 
 OBJETIVO

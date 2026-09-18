@@ -81,7 +81,7 @@ def publish(archive: Path, create_repository: bool, notes: str) -> str:
             token,
             "https://api.github.com/user/repos",
             "POST",
-            {"name": name, "description": "Distribuicao e atualizacoes do Localizador de Desenhos", "private": False, "auto_init": True},
+            {"name": name, "description": "Distribuicao e atualizacoes do Localizador de arquivo", "private": False, "auto_init": True},
         )
     if repository.get("private"):
         raise UpdateError("O atualizador exige um repositorio publico.")
@@ -98,11 +98,11 @@ def publish(archive: Path, create_repository: bool, notes: str) -> str:
         "POST",
         {
             "tag_name": "v" + info["version"],
-            "name": "Localizador de Desenhos " + info["version"],
+            "name": "Localizador de arquivo " + info["version"],
             "draft": True,
             "prerelease": False,
             "target_commitish": repository["default_branch"],
-            "body": "Pacote portatil do Localizador de Desenhos para Windows.\n\n"
+            "body": "Pacote portatil do Localizador de arquivo para Windows.\n\n"
                     "O atualizador preserva o endereco de desenhos salvo no computador."
                     + ("\n\n" + notes if notes else ""),
         },

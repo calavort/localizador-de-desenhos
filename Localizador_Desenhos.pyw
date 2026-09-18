@@ -12,7 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
-def message_box(text: str, title: str = "Localizador de Desenhos", error: bool = True) -> None:
+def message_box(text: str, title: str = "Localizador de arquivo", error: bool = True) -> None:
     if os.name == "nt":
         flags = 0x10 if error else 0x40
         try:
@@ -22,7 +22,7 @@ def message_box(text: str, title: str = "Localizador de Desenhos", error: bool =
 
 
 def save_crash_log(exc: BaseException) -> str:
-    base = Path(os.environ.get("LOCALAPPDATA", str(ROOT))) / "Localizador de Desenhos"
+    base = Path(os.environ.get("LOCALAPPDATA", str(ROOT))) / "Localizador de arquivo"
     base.mkdir(parents=True, exist_ok=True)
     path = base / "erro.log"
     with path.open("a", encoding="utf-8-sig") as handle:

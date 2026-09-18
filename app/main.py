@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import ctypes
 import os
+import shutil
 
 from .backend import Backend
 
@@ -13,7 +14,24 @@ def main() -> None:
     root = Path(__file__).resolve().parents[1]
     interface = root / "interface" / "index.html"
     icon = root / "interface" / "localizador.ico"
-    storage = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Localizador de Desenhos" / "WebView2Data"
+    local_app_data = Path(os.environ.get("LOCALAPPDATA", str(Path.home())))
+    app_data = local_app_data / "Localizador de arquivo"
+    legacy_app_data = local_app_data / "Localizador de Desenhos"
+    if legacy_app_data.is_dir() and not app_data.exists():
+        try:
+            legacy_app_data.replace(app_data)
+        except OSError:
+            shutil.copytree(legacy_app_data, app_data, dirs_exist_ok=True)
+    if os.name == "nt" and os.environ.get("APPDATA"):
+        programs = Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
+        legacy_shortcut = programs / "Localizador de Desenhos.lnk"
+        current_shortcut = programs / "Localizador de arquivo.lnk"
+        if legacy_shortcut.is_file() and not current_shortcut.exists():
+            try:
+                legacy_shortcut.replace(current_shortcut)
+            except OSError:
+                pass
+    storage = app_data / "WebView2Data"
     storage.mkdir(parents=True, exist_ok=True)
 
     if os.name == "nt":
@@ -24,7 +42,7 @@ def main() -> None:
 
     backend = Backend(root)
     window = webview.create_window(
-        "Localizador de Desenhos",
+        "Localizador de arquivo",
         url=interface.as_uri(),
         js_api=backend,
         width=620,

@@ -1,1 +1,1 @@
-"""Localizador de Desenhos."""
+"""Localizador de arquivo."""
