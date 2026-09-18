@@ -6,3 +6,7 @@ dist/
 .venv/
 venv/
 ErrorReports/
+
+# pacotes baixados para instalacao manual (o LEIA-ME fica versionado)
+atualizacao/*.zip
+atualizacao/*.sha256

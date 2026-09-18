@@ -19,7 +19,7 @@ input{height:30px;border:1px solid #c8c6c4;border-radius:4px;background:#fff;pad
 .dwg-list{border-top:1px solid #f1f1f1;background:#fff}.dwg-list[hidden]{display:none}.dwg-row{height:31px;padding:0 12px 0 31px;display:flex;align-items:center;border-bottom:1px solid #f0f0f0;background:#fff;color:#3b3a39;font-size:11.5px;cursor:pointer;transition:background-color .12s}.dwg-row:last-child{border-bottom:0}.dwg-row:hover{background:var(--accent-soft)}.dwg-row:focus-visible{outline:1px solid var(--accent);outline-offset:-1px}.dwg-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dwg-empty{padding:9px 31px;color:var(--muted);font-size:11px}
 .result-footer{min-height:42px;padding:7px 10px;border-top:1px solid var(--light-line);display:flex;align-items:center;justify-content:flex-end;flex:none}.clear-results{height:27px;padding:0 14px;border:1px solid #c8c6c4;border-radius:4px;background:#fff;color:var(--text);font-size:11px;font-weight:600;cursor:pointer}.clear-results:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}.clear-results:disabled{opacity:.45;cursor:default;background:#fff;border-color:#c8c6c4;color:var(--muted)}
 .specific-panel{position:relative}.specific-panel .disabled-content{display:flex;flex-direction:column;gap:12px;min-height:0;flex:1;opacity:.55;pointer-events:none}.specific-note{position:absolute;left:50%;top:50%;z-index:2;transform:translate(-50%,-50%);width:260px;padding:14px 18px;border:1px solid var(--line);border-radius:6px;background:rgba(255,255,255,.96);box-shadow:0 3px 10px rgba(0,0,0,.08);text-align:center;font-size:12px;color:var(--muted)}
-.update-card{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px;display:flex;flex-direction:column;gap:13px}.update-heading{display:flex;align-items:center;gap:11px}.update-icon{width:34px;height:34px;border-radius:5px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}.update-icon svg{width:20px;height:20px}.update-heading h2{font-size:15px;margin:0}.update-heading p{font-size:11px;color:var(--muted);margin:2px 0 0}.update-version{font-size:12px}.update-status{min-height:38px;padding:10px 12px;border:1px solid var(--light-line);border-radius:4px;background:#fafafa;color:var(--muted);font-size:11.5px;display:flex;align-items:center}.update-actions{display:flex;gap:8px}.update-note{font-size:10.5px;color:var(--muted);line-height:1.45;border-top:1px solid var(--light-line);padding-top:11px}.busy{opacity:.65;pointer-events:none}
+.filter-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}.filter-field{min-width:0}.filter-field input{width:100%}.filter-check{display:flex;align-items:center;gap:6px;height:30px;font-size:11.5px;color:var(--muted);cursor:pointer;white-space:nowrap}.filter-check input{width:14px;height:14px;accent-color:var(--accent);margin:0}.scan-info{margin-right:auto;font-size:11px;color:var(--muted)}.hit{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;padding:7px 11px;border-bottom:1px solid var(--light-line);cursor:pointer}.hit:last-child{border-bottom:0}.hit:hover,.hit:focus-visible{background:#f3f8f7;outline:0}.hit-icon{width:17px;height:17px;color:var(--accent);flex:none}.hit-main{min-width:0}.hit-name{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hit-path{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hit-open{height:24px;padding:0 9px;border:1px solid var(--accent);border-radius:4px;background:#fff;color:var(--accent);font-size:10.5px;font-weight:600;cursor:pointer}.hit-open:hover{background:var(--accent-soft)}.update-card{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px;display:flex;flex-direction:column;gap:13px}.update-heading{display:flex;align-items:center;gap:11px}.update-icon{width:34px;height:34px;border-radius:5px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}.update-icon svg{width:20px;height:20px}.update-heading h2{font-size:15px;margin:0}.update-heading p{font-size:11px;color:var(--muted);margin:2px 0 0}.update-version{font-size:12px}.update-status{min-height:38px;padding:10px 12px;border:1px solid var(--light-line);border-radius:4px;background:#fafafa;color:var(--muted);font-size:11.5px;display:flex;align-items:center}.update-actions{display:flex;gap:8px}.manual-box{border-top:1px solid var(--light-line);padding-top:12px;display:flex;flex-direction:column;gap:9px}.manual-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px}.update-note{font-size:10.5px;color:var(--muted);line-height:1.45;border-top:1px solid var(--light-line);padding-top:11px}.busy{opacity:.65;pointer-events:none}
 .status{height:28px;padding:0 12px;border-top:1px solid #e7e7e7;background:#fff;display:flex;align-items:center;font-size:10.5px;color:var(--muted);flex:none}
 </style>
 </head>
@@ -46,13 +46,11 @@ input{height:30px;border:1px solid #c8c6c4;border-radius:4px;background:#fff;pad
       <section class="result-area"><div class="result-list" id="results"><div class="empty"><div><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h10l4 4v12H4z"/><path d="M14 4v4h4M7 13h8M7 16h5"/></svg>Digite o número do desenho para localizar<br>o PDF da última revisão.</div></div></div><div class="result-footer"><button class="clear-results" id="clearResults" disabled>Limpar</button></div></section>
     </section>
 
-    <section class="tab-panel specific-panel" id="panel-especifica" role="tabpanel">
-      <div class="disabled-content" aria-disabled="true">
-        <section><div class="label">Pasta dos desenhos</div><div class="folder-row"><input disabled><button class="secondary" disabled>Procurar...</button></div></section>
-        <section><div class="label">Número do desenho</div><div class="search-row"><div class="search-wrap"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input placeholder="Ex.: IME-MC-1-44364 ou 44364" disabled></div><button class="primary" disabled>Localizar PDF</button></div></section>
-        <section class="result-area"><div class="empty">Funções específicas serão configuradas posteriormente.</div><div class="result-footer"><button class="clear-results" disabled>Limpar</button></div></section>
-      </div>
-      <div class="specific-note">Guia preparada para a próxima etapa.<br>As funções permanecem desabilitadas.</div>
+    <section class="tab-panel" id="panel-especifica" role="tabpanel">
+      <section><div class="label">Pasta da busca</div><div class="folder-row"><input id="sRoot" spellcheck="false" placeholder="Escolha a pasta onde procurar"><button class="secondary" id="sBrowse">Procurar...</button></div></section>
+      <section><div class="label">Parte do nome</div><div class="search-row"><div class="search-wrap"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input id="sQuery" placeholder="Ex.: 43300 rev5 — a ordem nao importa" autocomplete="off"></div><button class="primary" id="sSearch">Buscar</button></div></section>
+      <section class="filter-row"><div class="filter-field"><div class="label">Formatos (opcional)</div><input id="sExt" spellcheck="false" placeholder="pdf dwg xlsx — vazio busca todos"></div><label class="filter-check"><input type="checkbox" id="sContent"><span>Procurar tambem dentro do arquivo</span></label></section>
+      <section class="result-area"><div class="result-list" id="sResults"><div class="empty"><div><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h10l4 4v12H4z"/><path d="M14 4v4h4M7 13h8M7 16h5"/></svg>Escolha a pasta e digite parte do nome.<br>Arquivos e pastas entram no resultado.</div></div></div><div class="result-footer"><span class="scan-info" id="sInfo"></span><button class="clear-results" id="sCancel" hidden>Cancelar</button><button class="clear-results" id="sClear" disabled>Limpar</button></div></section>
     </section>
 
     <section class="tab-panel" id="panel-atualizacao" role="tabpanel">
@@ -61,7 +59,7 @@ input{height:30px;border:1px solid #c8c6c4;border-radius:4px;background:#fff;pad
         <div class="update-version">Versão instalada: <strong id="updateVersion">—</strong></div>
         <div class="update-status" id="updateStatus" role="status">Aguardando verificação.</div>
         <div class="update-actions"><button class="secondary" id="checkUpdate">Verificar</button><button class="primary" id="installUpdate" disabled>Atualizar</button></div>
-        <div class="update-note">O pacote é conferido por SHA-256 antes da instalação. O endereço salvo dos desenhos permanece fora do pacote e não é substituído durante a atualização.</div>
+        <div class="manual-box"><div class="manual-head"><strong>Pacote na pasta</strong><button class="secondary" id="openManualFolder">Abrir pasta</button></div><div class="update-status" id="manualStatus">Procurando pacote...</div><div class="update-actions"><button class="secondary" id="rescanManual">Reconferir</button><button class="primary" id="installManual" hidden>Instalar pacote</button></div></div><div class="update-note">O pacote é conferido por SHA-256 antes da instalação. O endereço salvo dos desenhos permanece fora do pacote e não é substituído durante a atualização.</div>
       </div>
     </section>
   </main>
@@ -98,8 +96,60 @@ $('#results').addEventListener('click',async event=>{const expand=event.target.c
 $('#results').addEventListener('keydown',async event=>{const dwg=event.target.closest('.dwg-row');const item=event.target.closest('.item');if((event.key==='Enter'||event.key===' ')&&dwg){event.preventDefault();await openDwg(dwg.dataset.resultI,dwg.dataset.dwgI)}else if((event.key==='Enter'||event.key===' ')&&item&&!event.target.closest('.expand-dwgs')){event.preventDefault();await openPdf(item.dataset.i)}});
 $('#clearResults').onclick=async()=>{const response=await api().clear_results();if(response.ok){empty('Digite o número do desenho para localizar o PDF da última revisão.');status('Lista limpa');$('#query').focus()}};
 $('#pinBtn').onclick=async()=>{const pin=$('#pinBtn');const enabled=pin.classList.contains('off');setPinState(enabled);const response=await api().set_topmost(enabled);setPinState(response.topmost)};
+/* ---------- guia Especifica: busca livre de arquivos e pastas ---------- */
+let sSeen=0,sTimer=null;
+const ICONE_PASTA='<svg class="hit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7h6l2 2h10v10H3z"/></svg>';
+const ICONE_ARQUIVO='<svg class="hit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>';
+function tamanhoLegivel(bytes){if(!bytes)return '';const un=['B','KB','MB','GB'];let i=0,v=bytes;while(v>=1024&&i<un.length-1){v/=1024;i++}return `${v<10&&i?v.toFixed(1):Math.round(v)} ${un[i]}`}
+function dataLegivel(ts){if(!ts)return '';const d=new Date(ts*1000);return d.toLocaleDateString('pt-BR')}
+function linhaHit(item){const detalhe=[item.isFolder?'Pasta':(item.suffix||'arquivo').replace('.',''),dataLegivel(item.modified),tamanhoLegivel(item.size)].filter(Boolean).join(' · ');
+ return `<div class="hit" role="button" tabindex="0" data-path="${esc(item.path)}" title="${esc(item.path)}"><span>${item.isFolder?ICONE_PASTA:ICONE_ARQUIVO}</span><div class="hit-main"><div class="hit-name">${esc(item.name)}</div><div class="hit-path">${esc(detalhe)} — ${esc(item.folder)}</div></div><button class="hit-open" data-reveal="1" data-path="${esc(item.path)}">Abrir pasta</button></div>`}
+function pintarHits(itens,substituir){const alvo=$('#sResults');if(substituir)alvo.innerHTML='';
+ if(substituir&&!itens.length){alvo.innerHTML='<div class="empty"><div>Nenhum arquivo ou pasta encontrado.</div></div>';return}
+ if(itens.length&&alvo.querySelector('.empty'))alvo.innerHTML='';
+ alvo.insertAdjacentHTML('beforeend',itens.map(linhaHit).join(''))}
+function buscaEmCurso(ativo){$('#sCancel').hidden=!ativo;$('#sSearch').disabled=ativo;$('#sSearch').textContent=ativo?'Buscando...':'Buscar'}
+async function pollBusca(){const r=await api().poll_file_search(sSeen);if(!r.ok)return;
+ if(r.replace){pintarHits(r.items,true);sSeen=r.items.length}else if(r.items.length){pintarHits(r.items,false);sSeen+=r.items.length}
+ $('#sClear').disabled=!sSeen;
+ $('#sInfo').textContent=r.done?`${sSeen} resultado(s)${r.truncated?' — limite de 300 atingido':''} · ${r.scanned} arquivos vistos`:`Procurando... ${sSeen} encontrado(s), ${r.scanned} vistos`;
+ if(r.message)status(r.message);
+ if(r.done){clearInterval(sTimer);sTimer=null;buscaEmCurso(false);status(sSeen?'Busca concluida':'Nada encontrado')}}
+async function iniciarBusca(){if(sTimer)return;
+ const r=await api().start_file_search($('#sRoot').value,$('#sQuery').value,$('#sExt').value,$('#sContent').checked);
+ if(!r.ok){status(r.message);return}
+ sSeen=0;$('#sResults').innerHTML='';$('#sInfo').textContent='Procurando...';buscaEmCurso(true);
+ sTimer=setInterval(pollBusca,350);pollBusca()}
+$('#sSearch').onclick=iniciarBusca;
+$('#sQuery').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarBusca()});
+$('#sCancel').onclick=async()=>{await api().cancel_file_search();status('Busca cancelada')};
+$('#sClear').onclick=()=>{$('#sResults').innerHTML='<div class="empty"><div>Escolha a pasta e digite parte do nome.</div></div>';$('#sInfo').textContent='';sSeen=0;$('#sClear').disabled=true;$('#sQuery').focus()};
+$('#sBrowse').onclick=async()=>{const r=await api().choose_folder();if(r.ok&&r.root)$('#sRoot').value=r.root};
+$('#sResults').addEventListener('click',async event=>{const botao=event.target.closest('.hit-open');const linha=event.target.closest('.hit');if(!linha&&!botao)return;
+ const alvo=botao||linha;const r=await api().open_file_hit(alvo.dataset.path,!!botao);status(r.ok?(botao?'Pasta aberta':'Item aberto'):r.message)});
+$('#sResults').addEventListener('keydown',async event=>{const linha=event.target.closest('.hit');if(linha&&(event.key==='Enter'||event.key===' ')){event.preventDefault();const r=await api().open_file_hit(linha.dataset.path,false);status(r.ok?'Item aberto':r.message)}});
+/* ---------- pacote deixado na pasta atualizacao/ ---------- */
+async function conferirPacoteLocal(){const r=await api().scan_manual_update();
+ if(!r.ok){$('#manualStatus').textContent=r.message;$('#installManual').hidden=true;return}
+ $('#manualStatus').textContent=r.message;
+ $('#installManual').hidden=!r.found;
+ $('#installManual').dataset.libs=r.changesLibraries?'1':'';
+ $('#installManual').textContent=r.found?`Instalar ${r.version}`:'Instalar pacote'}
+$('#rescanManual').onclick=conferirPacoteLocal;
+$('#openManualFolder').onclick=async()=>{const r=await api().open_manual_folder();if(!r.ok)status(r.message)};
+$('#installManual').onclick=async()=>{
+ const mudaLibs=$('#installManual').dataset.libs==='1';
+ const aviso=mudaLibs?'Esta versão muda as bibliotecas. Depois de instalar, rode o Instalar Bibliotecas.bat antes de abrir o programa.
+
+Instalar agora?':'Instalar o pacote da pasta agora?';
+ if(!confirm(aviso))return;
+ $('#installManual').disabled=true;
+ const r=await api().install_manual_update();
+ $('#manualStatus').textContent=r.message;status(r.message);
+ if(!r.ok)$('#installManual').disabled=false};
 $('#checkUpdate').onclick=checkForUpdate;
 $('#installUpdate').onclick=installUpdate;
+conferirPacoteLocal();
 </script>
 </body>
 </html>

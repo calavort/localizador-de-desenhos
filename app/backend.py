@@ -10,7 +10,8 @@ import sys
 import tempfile
 import threading
 
-from .search_service import find_latest_pdfs
+from .search_service import (find_latest_pdfs, iter_file_matches, parse_suffixes,
+                             relevance, split_terms)
 from .updater import UpdateService
 
 DEFAULT_ROOT = r"C:\Users\joliveira\Documents\DETALHAMENTO\GATO DO MATO"
@@ -29,6 +30,14 @@ class Backend:
         self.config_file = self.config_dir / "configuracoes.json"
         self.settings = self._load_settings()
         self.updates = UpdateService(app_root)
+        # Guia Especifica: a varredura roda numa thread e a interface busca o
+        # que ja apareceu, para nao travar a janela em pasta grande.
+        self.file_hits: list[dict] = []
+        self.file_lock = threading.Lock()
+        self.file_stop = threading.Event()
+        self.file_thread: threading.Thread | None = None
+        self.file_state = {"running": False, "scanned": 0, "truncated": False, "message": ""}
+        self.file_terms: list[str] = []
 
     def _load_settings(self) -> dict:
         settings = {"drawing_root": DEFAULT_ROOT, "topmost": True}
@@ -282,6 +291,112 @@ if ($dialogo.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $seleci
 
     def close(self) -> None:
         self.window.destroy()
+
+    # ---------------------------------------------------------------- guia Especifica
+    FILE_SEARCH_LIMIT = 300
+
+    def start_file_search(self, folder: str, query: str, suffixes: str = "",
+                          inside_content: bool = False) -> dict:
+        root = Path(str(folder).strip())
+        if not root.is_dir():
+            return {"ok": False, "message": "A pasta informada nao existe ou nao esta acessivel."}
+        # Regra do programa: procura dentro de uma pasta, nunca numa unidade inteira.
+        if root.parent == root:
+            return {"ok": False, "message": "Escolha uma pasta, e nao a raiz de uma unidade."}
+        terms = split_terms(query)
+        if not terms:
+            return {"ok": False, "message": "Digite parte do nome do arquivo."}
+
+        self.cancel_file_search()
+        self.file_stop = threading.Event()
+        with self.file_lock:
+            self.file_hits = []
+            self.file_state = {"running": True, "scanned": 0, "truncated": False, "message": ""}
+            self.file_terms = terms
+        stop = self.file_stop
+        limite = self.FILE_SEARCH_LIMIT
+
+        def varrer() -> None:
+            achados = 0
+            try:
+                for tipo, dado in iter_file_matches(root, terms, parse_suffixes(suffixes),
+                                                    True, bool(inside_content), stop, limite):
+                    with self.file_lock:
+                        if tipo == "achado":
+                            self.file_hits.append(dado)
+                            achados += 1
+                        else:
+                            self.file_state["scanned"] = dado
+            except Exception as exc:
+                with self.file_lock:
+                    self.file_state["message"] = f"A busca parou: {exc}"
+            finally:
+                with self.file_lock:
+                    self.file_state["running"] = False
+                    self.file_state["truncated"] = achados >= limite
+
+        self.file_thread = threading.Thread(target=varrer, daemon=True)
+        self.file_thread.start()
+        return {"ok": True}
+
+    def poll_file_search(self, seen: int = 0) -> dict:
+        """Devolve o que apareceu depois dos 'seen' resultados ja entregues."""
+        with self.file_lock:
+            hits = list(self.file_hits)
+            estado = dict(self.file_state)
+        novos = hits[int(seen):]
+        if not estado["running"]:
+            # No fim, reordena por relevancia e manda a lista inteira.
+            hits.sort(key=lambda item: relevance(item, self.file_terms))
+            return {"ok": True, "items": hits, "replace": True, "done": True,
+                    "scanned": estado["scanned"], "truncated": estado["truncated"],
+                    "message": estado["message"]}
+        return {"ok": True, "items": novos, "replace": False, "done": False,
+                "scanned": estado["scanned"], "truncated": estado["truncated"],
+                "message": estado["message"]}
+
+    def cancel_file_search(self) -> dict:
+        self.file_stop.set()
+        thread = self.file_thread
+        if thread and thread.is_alive():
+            thread.join(timeout=2)
+        with self.file_lock:
+            self.file_state["running"] = False
+        return {"ok": True}
+
+    def open_file_hit(self, path: str, reveal: bool = False) -> dict:
+        alvo = Path(str(path))
+        if not alvo.exists():
+            return {"ok": False, "message": "O item nao esta mais disponivel."}
+        try:
+            if os.name == "nt":
+                if reveal:
+                    subprocess.Popen(["explorer", "/select,", str(alvo)])
+                else:
+                    os.startfile(str(alvo))
+            else:
+                abrir = ["open"] if sys.platform == "darwin" else ["xdg-open"]
+                subprocess.Popen(abrir + [str(alvo if not reveal else alvo.parent)])
+            return {"ok": True}
+        except OSError as exc:
+            return {"ok": False, "message": f"Nao foi possivel abrir: {exc}"}
+
+    def scan_manual_update(self) -> dict:
+        return self.updates.scan_manual()
+
+    def install_manual_update(self) -> dict:
+        return self.updates.install_manual()
+
+    def open_manual_folder(self) -> dict:
+        try:
+            pasta = self.updates.manual_folder()
+            if os.name == "nt":
+                os.startfile(str(pasta))
+            else:
+                subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", str(pasta)])
+            return {"ok": True}
+        except OSError as exc:
+            return {"ok": False, "message": f"Nao foi possivel abrir a pasta: {exc}"}
 
     def check_update(self) -> dict:
         return self.updates.check()

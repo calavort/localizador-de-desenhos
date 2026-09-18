@@ -1,0 +1,13 @@
+Pasta de atualizacao manual
+===========================
+
+Baixe o pacote da versao nova (Localizador_de_Desenhos-X.Y.Z.zip)
+e deixe ele AQUI, sem extrair.
+
+Depois abra o programa, va na guia ATUALIZACAO e clique em
+"Instalar pacote". O programa confere o pacote e se reinicia sozinho.
+
+Quando a versao nova mudar as bibliotecas, o programa avisa na tela:
+nesse caso, rode o "Instalar Bibliotecas.bat" depois de instalar.
+
+Nada mais precisa ser feito. Esta pasta pode ficar vazia.

@@ -38,6 +38,7 @@ APP_FILES = (
     "interface/localizador.ico",
     "interface/localizador.svg",
     "interface/localizador.png",
+    "atualizacao/LEIA-ME.txt",
     "gerar_pacote_release.py",
     "ferramentas/publicar_release.py",
     "GUIA_ATUALIZACAO.md",
@@ -76,7 +77,8 @@ def safe_member_name(value: str) -> str:
     return normalized
 
 
-def validate_package(package: Path, info: dict, expected_version: str) -> dict:
+def validate_package(package: Path, info: dict, expected_version: str,
+                     check_requirements: bool = True) -> dict:
     with zipfile.ZipFile(package) as archive:
         members = [entry for entry in archive.infolist() if not entry.is_dir()]
         if not members or len(members) > MAX_FILES:
@@ -110,9 +112,10 @@ def validate_package(package: Path, info: dict, expected_version: str) -> dict:
                 raise UpdateError("Hash invalido no manifesto.")
             if sha256_bytes(archive.read(name)) != expected:
                 raise UpdateError(f"Integridade invalida no arquivo {name}.")
-        current_requirements = (package.parent.parent / "requirements.txt")
-        if current_requirements.is_file() and archive.read("requirements.txt") != current_requirements.read_bytes():
-            raise UpdateError("Esta versao altera bibliotecas. Instale o pacote manualmente.")
+        if check_requirements:
+            current_requirements = (package.parent.parent / "requirements.txt")
+            if current_requirements.is_file() and archive.read("requirements.txt") != current_requirements.read_bytes():
+                raise UpdateError("Esta versao altera bibliotecas. Instale o pacote manualmente.")
         return manifest
 
 
@@ -144,6 +147,104 @@ class UpdateService:
             if response.status != 200:
                 raise UpdateError("O GitHub nao retornou um release valido.")
             return json.loads(response.read(2 * 1024 * 1024))
+
+    # ------------------------------------------------ pacote deixado na pasta
+    # Caminho para quando a versao nova muda as bibliotecas: o automatico se
+    # recusa (instalaria algo que nao abre), entao o pacote e colocado a mao em
+    # "atualizacao/" e instalado daqui, com aviso.
+    MANUAL_DIR = "atualizacao"
+
+    def manual_folder(self) -> Path:
+        pasta = self.root / self.MANUAL_DIR
+        pasta.mkdir(exist_ok=True)
+        return pasta
+
+    def _manual_packages(self) -> list[Path]:
+        return sorted(
+            (item for item in self.manual_folder().glob("*.zip") if item.is_file()),
+            key=lambda item: item.stat().st_mtime,
+            reverse=True,
+        )
+
+    def scan_manual(self) -> dict:
+        """Diz o que ha na pasta, sem instalar nada."""
+        try:
+            pasta = self.manual_folder()
+        except OSError as exc:
+            return {"ok": False, "message": f"Nao foi possivel abrir a pasta: {exc}"}
+        pacotes = self._manual_packages()
+        if not pacotes:
+            return {"ok": True, "found": False, "folder": str(pasta),
+                    "message": "Nenhum pacote na pasta atualizacao."}
+        pacote = pacotes[0]
+        versao = self._package_version(pacote)
+        if not versao:
+            return {"ok": True, "found": False, "folder": str(pasta), "file": pacote.name,
+                    "message": f"{pacote.name} nao parece um pacote deste programa."}
+        if version_key(versao) <= version_key(self.version):
+            return {"ok": True, "found": False, "folder": str(pasta), "file": pacote.name,
+                    "message": f"O pacote da pasta e a versao {versao}; voce ja tem a {self.version}."}
+        return {"ok": True, "found": True, "folder": str(pasta), "file": pacote.name,
+                "version": versao, "changesLibraries": self._changes_requirements(pacote),
+                "message": f"Pacote da versao {versao} pronto para instalar."}
+
+    def _package_version(self, pacote: Path) -> str:
+        try:
+            with zipfile.ZipFile(pacote) as arquivo:
+                manifesto = json.loads(arquivo.read(MANIFEST).decode("utf-8"))
+            if manifesto.get("app_id") != APP_ID:
+                return ""
+            versao = str(manifesto.get("version", ""))
+            version_key(versao)
+            return versao
+        except (OSError, ValueError, KeyError, zipfile.BadZipFile, UpdateError):
+            return ""
+
+    def _changes_requirements(self, pacote: Path) -> bool:
+        try:
+            atual = (self.root / "requirements.txt").read_bytes()
+            with zipfile.ZipFile(pacote) as arquivo:
+                return arquivo.read("requirements.txt") != atual
+        except (OSError, KeyError, zipfile.BadZipFile):
+            return False
+
+    def install_manual(self) -> dict:
+        """Instala o pacote da pasta, com as mesmas conferencias do automatico."""
+        try:
+            if (self.root / ".git").exists():
+                raise UpdateError("Atualizacao desativada nesta pasta de desenvolvimento.")
+            pacotes = self._manual_packages()
+            if not pacotes:
+                raise UpdateError("Nenhum pacote na pasta atualizacao.")
+            origem = pacotes[0]
+            versao = self._package_version(origem)
+            if not versao:
+                raise UpdateError("O arquivo da pasta nao e um pacote deste programa.")
+            if version_key(versao) <= version_key(self.version):
+                return {"ok": True, "message": f"Voce ja esta na versao {self.version}."}
+
+            estado = self.root / ".atualizacoes"
+            if estado.is_symlink():
+                raise UpdateError("A pasta de atualizacoes nao pode ser um link.")
+            estado.mkdir(exist_ok=True)
+            destino = estado / origem.name
+            shutil.copy2(origem, destino)
+            # Aqui a conferencia de bibliotecas fica de fora de proposito: este e
+            # o caminho manual, e o aviso ja foi dado na tela.
+            validate_package(destino, self.version_info, versao, check_requirements=False)
+            digest = sha256_file(destino)
+
+            instalador = estado / "instalador.py"
+            shutil.copy2(self.root / "instalador.py", instalador)
+            subprocess.Popen(
+                [sys.executable, str(instalador), "--root", str(self.root), "--package", str(destino),
+                 "--sha256", digest, "--version", versao],
+                cwd=str(self.root),
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            return {"ok": True, "message": f"Pacote {versao} validado. O programa sera reiniciado."}
+        except (UpdateError, OSError, ValueError, zipfile.BadZipFile) as exc:
+            return {"ok": False, "message": str(exc)}
 
     def check(self) -> dict:
         try:
