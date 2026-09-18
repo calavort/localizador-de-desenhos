@@ -20,6 +20,27 @@ def launch(root: Path, launcher: str) -> None:
     subprocess.Popen([executable, str(root / launcher)], cwd=str(root), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
 
+def install_requirements(root: Path) -> dict:
+    """Instala as bibliotecas da versao nova.
+
+    So roda quando o requirements.txt mudou de verdade. Se falhar, o programa
+    ainda abre: o aviso aparece na guia Atualizacao e o "Instalar
+    Bibliotecas.bat" continua servindo de saida manual.
+    """
+    try:
+        resultado = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"],
+            cwd=str(root), capture_output=True, text=True, timeout=900,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"ok": False, "detalhe": str(exc)}
+    if resultado.returncode == 0:
+        return {"ok": True, "detalhe": ""}
+    saida = (resultado.stderr or resultado.stdout or "").strip().splitlines()
+    return {"ok": False, "detalhe": " ".join(saida[-3:])[:400]}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", required=True)
@@ -38,14 +59,17 @@ def main() -> None:
     if sha256_file(package) != args.sha256:
         raise SystemExit("O pacote mudou depois da validacao SHA-256.")
     info = json.loads((root / "versao.json").read_text(encoding="utf-8"))
+    # Aqui a conferencia e de integridade, nao de politica: quem decide se a
+    # versao pode ser instalada e o programa, antes de chamar o instalador.
     manifest = validate_package(package, info, args.version)
+    antes_requisitos = (root / "requirements.txt").read_bytes()
     files = tuple(sorted(manifest["files"]))
     launcher = str(info.get("launcher") or "Localizador_Desenhos.pyw")
     state = root / ".atualizacoes"
     stage = state / "preparado"
     backup = state / "backup"
     journal = state / "instalacao.json"
-    time.sleep(1.2)
+    time.sleep(2.5)  # folga para o programa fechar antes de ser reaberto
 
     for target in (stage, backup):
         if target.exists():
@@ -88,6 +112,10 @@ def main() -> None:
     else:
         new_info = json.loads((root / "versao.json").read_text(encoding="utf-8"))
         launcher = str(new_info.get("launcher") or launcher)
+        if (root / "requirements.txt").read_bytes() != antes_requisitos:
+            estado = install_requirements(root)
+            estado["version"] = args.version
+            (state / "bibliotecas.json").write_text(json.dumps(estado), encoding="utf-8")
         journal.unlink(missing_ok=True)
         shutil.rmtree(stage, ignore_errors=True)
         shutil.rmtree(backup, ignore_errors=True)

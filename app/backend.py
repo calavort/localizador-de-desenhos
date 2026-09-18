@@ -58,12 +58,21 @@ class Backend:
         os.replace(temporary, self.config_file)
 
     def ready(self) -> dict:
+        # Abrir o programa e a hora certa de arrumar a casa: apagar o que a
+        # atualizacao anterior deixou para tras e instalar, sem pedir clique,
+        # um pacote que o usuario tenha largado na pasta atualizacao/.
+        aviso = self.updates.cleanup_leftovers()
+        pendente = self.updates.auto_install_manual()
+        if pendente.get("started") and self.window is not None:
+            threading.Timer(.25, self.window.destroy).start()
         return {
             "ok": True,
             "root": self.settings["drawing_root"],
             "searchRoot": self.settings.get("search_root", ""),
             "version": self.updates.version,
             "topmost": bool(self.settings["topmost"]),
+            "libraryWarning": aviso,
+            "autoUpdate": pendente,
         }
 
     def _apply_topmost(self, enabled: bool) -> bool:
@@ -452,7 +461,10 @@ $selecionada = [PastaModerna]::Escolher('Selecione a pasta de busca', $env:LOCAL
         return self.updates.scan_manual()
 
     def install_manual_update(self) -> dict:
-        return self.updates.install_manual()
+        result = self.updates.install_manual()
+        if result.get("restarting") and self.window is not None:
+            threading.Timer(.3, self.window.destroy).start()
+        return result
 
     def open_manual_folder(self) -> dict:
         try:

@@ -129,12 +129,17 @@ function perguntar(texto,titulo='Atualização',rotuloSim='Confirmar'){
   $('#askYes').onclick=()=>encerrar(true);$('#askNo').onclick=()=>encerrar(false);
   $('#askBack').onclick=(e)=>{if(e.target===$('#askBack'))encerrar(false)};
   document.addEventListener('keydown',porTecla)})}
-async function installUpdate(){if(!updateAvailable)return;if(!await perguntar('Baixar e instalar a atualização agora? O programa será reiniciado.','Atualizar programa','Atualizar'))return;$('#checkUpdate').disabled=true;$('#installUpdate').disabled=true;$('#updateStatus').textContent='Baixando e preparando a atualização...';const response=await api().install_update();$('#updateStatus').textContent=response.message;if(!response.ok){$('#checkUpdate').disabled=false;$('#installUpdate').disabled=false}
- /* Versão que mexe nas bibliotecas: o pacote já foi baixado para a pasta,
-    então o botão de instalar a mão aparece logo abaixo, sem novo download. */
- if(response.needsManual)conferirPacoteLocal()}
+async function installUpdate(){if(!updateAvailable)return;if(!await perguntar('Baixar e instalar a atualização agora? O programa será reiniciado.','Atualizar programa','Atualizar'))return;$('#checkUpdate').disabled=true;$('#installUpdate').disabled=true;$('#updateStatus').textContent='Baixando e preparando a atualização...';const response=await api().install_update();$('#updateStatus').textContent=response.message;if(!response.ok){$('#checkUpdate').disabled=false;$('#installUpdate').disabled=false}}
 
-window.addEventListener('pywebviewready',async()=>{const response=await api().ready();$('#root').value=response.root;if(response.searchRoot)$('#sRoot').value=response.searchRoot;$('#updateVersion').textContent=response.version;setPinState(response.topmost);status('Pronto para pesquisar');conferirPacoteLocal()});
+window.addEventListener('pywebviewready',async()=>{const response=await api().ready();$('#root').value=response.root;if(response.searchRoot)$('#sRoot').value=response.searchRoot;$('#updateVersion').textContent=response.version;setPinState(response.topmost);
+ /* Pacote largado na pasta: o programa instala sozinho e se reinicia, então
+    não adianta continuar montando a tela. */
+ const auto=response.autoUpdate||{};
+ if(auto.started){status(`Instalando a versão ${auto.version}... o programa vai reiniciar.`);$('#updateStatus').textContent=`Instalando a versão ${auto.version}...`;return}
+ const libs=response.libraryWarning||{};
+ if(libs.failed){status(libs.message);$('#updateStatus').textContent=libs.message+(libs.detail?` (${libs.detail})`:'')}
+ else status('Pronto para pesquisar');
+ conferirPacoteLocal()});
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>switchTab(button.dataset.tab)));
 $('#browse').onclick=async()=>{const button=$('#browse');button.disabled=true;status('Selecione a pasta de busca...');try{const response=await api().choose_folder();if(response.root)$('#root').value=response.root;status(response.message||(response.selected?'Pasta registrada':'Seleção cancelada'))}catch(error){status('Não foi possível abrir o seletor de pastas.')}finally{button.disabled=false}};
 $('#root').addEventListener('change',async()=>{const response=await api().set_root($('#root').value);if(!response.ok){status(response.message)}else{$('#root').value=response.root;status('Pasta registrada')}});
@@ -198,7 +203,7 @@ $('#rescanManual').onclick=conferirPacoteLocal;
 $('#openManualFolder').onclick=async()=>{const r=await api().open_manual_folder();if(!r.ok)status(r.message)};
 $('#installManual').onclick=async()=>{
  const mudaLibs=$('#installManual').dataset.libs==='1';
- const aviso=mudaLibs?'Esta versão muda as bibliotecas. Depois de instalar, rode o Instalar Bibliotecas.bat antes de abrir o programa. Instalar agora?':'Instalar o pacote da pasta agora?';
+ const aviso=mudaLibs?'Esta versão também atualiza as bibliotecas, então pode demorar um pouco mais. O programa faz tudo e reinicia. Instalar agora?':'Instalar o pacote da pasta agora?';
  if(!await perguntar(aviso,'Instalar pacote da pasta','Instalar'))return;
  $('#installManual').disabled=true;
  const r=await api().install_manual_update();

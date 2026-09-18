@@ -77,8 +77,7 @@ def safe_member_name(value: str) -> str:
     return normalized
 
 
-def validate_package(package: Path, info: dict, expected_version: str,
-                     check_requirements: bool = True) -> dict:
+def validate_package(package: Path, info: dict, expected_version: str) -> dict:
     with zipfile.ZipFile(package) as archive:
         members = [entry for entry in archive.infolist() if not entry.is_dir()]
         if not members or len(members) > MAX_FILES:
@@ -112,10 +111,6 @@ def validate_package(package: Path, info: dict, expected_version: str,
                 raise UpdateError("Hash invalido no manifesto.")
             if sha256_bytes(archive.read(name)) != expected:
                 raise UpdateError(f"Integridade invalida no arquivo {name}.")
-        if check_requirements:
-            current_requirements = (package.parent.parent / "requirements.txt")
-            if current_requirements.is_file() and archive.read("requirements.txt") != current_requirements.read_bytes():
-                raise UpdateError("Esta versao altera bibliotecas. Instale o pacote manualmente.")
         return manifest
 
 
@@ -208,6 +203,48 @@ class UpdateService:
         except (OSError, KeyError, zipfile.BadZipFile):
             return False
 
+    def cleanup_leftovers(self) -> dict:
+        """Apaga o que sobra de uma atualizacao e conta como foi o pip.
+
+        O instalador nao consegue apagar a si mesmo enquanto roda, entao quem
+        limpa e o programa ja reaberto. Tambem tira da pasta atualizacao/ os
+        pacotes de versoes que ja estao instaladas.
+        """
+        aviso: dict = {}
+        estado = self.root / ".atualizacoes"
+        try:
+            registro = estado / "bibliotecas.json"
+            if registro.is_file():
+                dados = json.loads(registro.read_text(encoding="utf-8"))
+                if not dados.get("ok"):
+                    aviso = {
+                        "failed": True,
+                        "detail": str(dados.get("detalhe", ""))[:400],
+                        "message": ("A versao nova foi instalada, mas as bibliotecas nao. "
+                                    "Rode o Instalar Bibliotecas.bat uma vez."),
+                    }
+        except (OSError, ValueError):
+            pass
+        if estado.is_dir() and not estado.is_symlink():
+            shutil.rmtree(estado, ignore_errors=True)
+        try:
+            for pacote in self._manual_packages():
+                versao = self._package_version(pacote)
+                if versao and version_key(versao) <= version_key(self.version):
+                    pacote.unlink(missing_ok=True)
+        except (OSError, UpdateError):
+            pass
+        return aviso
+
+    def auto_install_manual(self) -> dict:
+        """Instala sozinho o pacote deixado na pasta, sem esperar o clique."""
+        achado = self.scan_manual()
+        if not achado.get("ok") or not achado.get("found"):
+            return {"started": False}
+        resultado = self.install_manual()
+        return {"started": bool(resultado.get("restarting")), "version": achado.get("version", ""),
+                "message": resultado.get("message", "")}
+
     def install_manual(self) -> dict:
         """Instala o pacote da pasta, com as mesmas conferencias do automatico."""
         try:
@@ -229,9 +266,7 @@ class UpdateService:
             estado.mkdir(exist_ok=True)
             destino = estado / origem.name
             shutil.copy2(origem, destino)
-            # Aqui a conferencia de bibliotecas fica de fora de proposito: este e
-            # o caminho manual, e o aviso ja foi dado na tela.
-            validate_package(destino, self.version_info, versao, check_requirements=False)
+            validate_package(destino, self.version_info, versao)
             digest = sha256_file(destino)
 
             instalador = estado / "instalador.py"
@@ -242,7 +277,8 @@ class UpdateService:
                 cwd=str(self.root),
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
-            return {"ok": True, "message": f"Pacote {versao} validado. O programa sera reiniciado."}
+            return {"ok": True, "restarting": True,
+                    "message": f"Pacote {versao} validado. O programa sera reiniciado."}
         except (UpdateError, OSError, ValueError, zipfile.BadZipFile) as exc:
             return {"ok": False, "message": str(exc)}
 
@@ -288,21 +324,6 @@ class UpdateService:
             digest = sha256_file(package)
             if not re.fullmatch(r"[0-9a-f]{64}", expected) or digest != expected:
                 raise UpdateError("Falha na verificacao SHA-256. Nenhum arquivo foi alterado.")
-            # Versao que muda bibliotecas nao pode ser instalada por aqui (o
-            # instalador nao roda pip). Em vez de so recusar, o pacote ja
-            # conferido vai para a pasta atualizacao/, e o usuario termina em
-            # dois cliques em vez de ter que baixar tudo de novo a mao.
-            if self._changes_requirements(package):
-                destino = self.manual_folder() / package_name
-                destino.unlink(missing_ok=True)  # clicar em Atualizar de novo nao pode falhar
-                shutil.move(str(package), str(destino))
-                return {
-                    "ok": False,
-                    "needsManual": True,
-                    "message": (f"A versao {latest} muda as bibliotecas. O pacote foi baixado para a "
-                                "pasta atualizacao: use 'Instalar pacote' abaixo e depois rode o "
-                                "Instalar Bibliotecas.bat."),
-                }
             validate_package(package, self.version_info, latest)
             installer = state / "instalador.py"
             shutil.copy2(self.root / "instalador.py", installer)

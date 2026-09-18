@@ -84,9 +84,9 @@ SKIPPED_DIRS = {
     "$recycle.bin", "system volume information", "windows", "程序文件",
 }
 
-# Conteudo legivel sem biblioteca extra. O PDF depende do PyMuPDF, que consta
-# do requirements.txt; se ainda nao estiver instalado, read_text_content tenta o
-# pypdf e, na falta dos dois, apenas ignora o arquivo em vez de quebrar a busca.
+# Conteudo legivel sem biblioteca extra. O PDF depende do PyMuPDF; sem ele,
+# read_text_content tenta o pypdf e, na falta dos dois, ignora o arquivo em vez
+# de quebrar a busca.
 TEXT_SUFFIXES = {".txt", ".csv", ".md", ".log", ".ini", ".cfg", ".json", ".xml",
                  ".html", ".htm", ".css", ".js", ".py", ".pyw", ".bat", ".ps1",
                  ".yml", ".yaml", ".srt", ".sql"}

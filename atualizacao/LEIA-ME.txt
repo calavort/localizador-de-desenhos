@@ -4,14 +4,16 @@ Pasta de atualizacao manual
 Baixe o pacote da versao nova (Localizador_de_Desenhos-X.Y.Z.zip)
 e deixe ele AQUI, sem extrair.
 
-Depois abra o programa, va na guia ATUALIZACAO e clique em
-"Instalar pacote". O programa confere o pacote e se reinicia sozinho.
+Depois e so abrir o programa. Ele encontra o pacote sozinho, confere,
+instala, atualiza as bibliotecas se for preciso e reinicia. Nada de
+clicar em nada, e nao precisa rodar o Instalar Bibliotecas.bat.
 
-Quando a versao nova mudar as bibliotecas, o programa avisa na tela:
-nesse caso, rode o "Instalar Bibliotecas.bat" depois de instalar.
+Se preferir fazer na mao, o botao "Instalar pacote" na guia ATUALIZACAO
+faz a mesma coisa.
 
-Voce nem sempre precisa baixar a mao: se o botao "Atualizar" encontrar
-uma versao que muda as bibliotecas, ele baixa o pacote para esta pasta
-sozinho e avisa. Ai e so clicar em "Instalar pacote" e rodar o .bat.
+Depois de instalado, o programa apaga o pacote daqui. Esta pasta pode
+ficar vazia: e assim que ela fica no dia a dia.
 
-Nada mais precisa ser feito. Esta pasta pode ficar vazia.
+O Instalar Bibliotecas.bat continua ai so como saida de emergencia, para
+o caso raro de a instalacao das bibliotecas falhar (sem internet, por
+exemplo). Quando isso acontece, o programa avisa na tela.
