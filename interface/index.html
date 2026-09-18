@@ -86,7 +86,7 @@ function toggleDwgs(button){const list=$(`.dwg-list[data-i="${button.dataset.i}"
 async function checkForUpdate(){const check=$('#checkUpdate');const install=$('#installUpdate');check.disabled=true;install.disabled=true;$('#updateStatus').textContent='Verificando atualizações...';const response=await api().check_update();check.disabled=false;updateAvailable=Boolean(response.ok&&response.available);install.disabled=!updateAvailable;$('#updateStatus').textContent=response.message;if(response.version)install.textContent=`Atualizar para ${response.version}`}
 async function installUpdate(){if(!updateAvailable)return;if(!confirm('Deseja baixar e instalar a atualização agora?'))return;$('#checkUpdate').disabled=true;$('#installUpdate').disabled=true;$('#updateStatus').textContent='Baixando e preparando a atualização...';const response=await api().install_update();$('#updateStatus').textContent=response.message;if(!response.ok){$('#checkUpdate').disabled=false;$('#installUpdate').disabled=false}}
 
-window.addEventListener('pywebviewready',async()=>{const response=await api().ready();$('#root').value=response.root;$('#updateVersion').textContent=response.version;setPinState(response.topmost);status('Pronto para pesquisar')});
+window.addEventListener('pywebviewready',async()=>{const response=await api().ready();$('#root').value=response.root;$('#updateVersion').textContent=response.version;setPinState(response.topmost);status('Pronto para pesquisar');conferirPacoteLocal()});
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>switchTab(button.dataset.tab)));
 $('#browse').onclick=async()=>{const button=$('#browse');button.disabled=true;status('Selecione a pasta de busca...');try{const response=await api().choose_folder();if(response.root)$('#root').value=response.root;status(response.message||(response.selected?'Pasta registrada':'Seleção cancelada'))}catch(error){status('Não foi possível abrir o seletor de pastas.')}finally{button.disabled=false}};
 $('#root').addEventListener('change',async()=>{const response=await api().set_root($('#root').value);if(!response.ok){status(response.message)}else{$('#root').value=response.root;status('Pasta registrada')}});
@@ -139,9 +139,7 @@ $('#rescanManual').onclick=conferirPacoteLocal;
 $('#openManualFolder').onclick=async()=>{const r=await api().open_manual_folder();if(!r.ok)status(r.message)};
 $('#installManual').onclick=async()=>{
  const mudaLibs=$('#installManual').dataset.libs==='1';
- const aviso=mudaLibs?'Esta versão muda as bibliotecas. Depois de instalar, rode o Instalar Bibliotecas.bat antes de abrir o programa.
-
-Instalar agora?':'Instalar o pacote da pasta agora?';
+ const aviso=mudaLibs?'Esta versão muda as bibliotecas. Depois de instalar, rode o Instalar Bibliotecas.bat antes de abrir o programa. Instalar agora?':'Instalar o pacote da pasta agora?';
  if(!confirm(aviso))return;
  $('#installManual').disabled=true;
  const r=await api().install_manual_update();
@@ -149,7 +147,6 @@ Instalar agora?':'Instalar o pacote da pasta agora?';
  if(!r.ok)$('#installManual').disabled=false};
 $('#checkUpdate').onclick=checkForUpdate;
 $('#installUpdate').onclick=installUpdate;
-conferirPacoteLocal();
 </script>
 </body>
 </html>
