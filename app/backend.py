@@ -18,10 +18,20 @@ DEFAULT_ROOT = r"C:\Users\joliveira\Documents\DETALHAMENTO\GATO DO MATO"
 
 
 class Backend:
+    """Ponte entre a pagina e o Python.
+
+    Antes de liberar a interface, o pywebview percorre os atributos publicos
+    desta classe para montar ``window.pywebview.api``. Guardar a janela em
+    ``self.window`` colocava o objeto nativo do Windows nesse caminho: a
+    varredura descia por milhares de propriedades do formulario e a pagina
+    so aparecia seis segundos depois, em branco ate la. Por isso a janela e
+    o que e so uso interno moram em nomes com ``_``, que a varredura pula.
+    """
+
     def __init__(self, app_root: Path):
         self.app_root = app_root
-        self.window = None
-        self.native_handle: int | None = None
+        self._window = None
+        self._native_handle: int | None = None
         self.results: list[Path] = []
         self.result_folders: list[Path] = []
         self.result_dwgs: list[list[Path]] = []
@@ -63,8 +73,8 @@ class Backend:
         # um pacote que o usuario tenha largado na pasta atualizacao/.
         aviso = self.updates.cleanup_leftovers()
         pendente = self.updates.auto_install_manual()
-        if pendente.get("started") and self.window is not None:
-            threading.Timer(.25, self.window.destroy).start()
+        if pendente.get("started") and self._window is not None:
+            threading.Timer(.25, self._window.destroy).start()
         return {
             "ok": True,
             "root": self.settings["drawing_root"],
@@ -76,19 +86,19 @@ class Backend:
         }
 
     def _apply_topmost(self, enabled: bool) -> bool:
-        if self.window is None:
+        if self._window is None:
             return False
 
         enabled = bool(enabled)
         if os.name != "nt":
             try:
-                self.window.on_top = enabled
+                self._window.on_top = enabled
                 return True
             except Exception:
                 return False
 
         try:
-            hwnd = int(self.native_handle or 0)
+            hwnd = int(self._native_handle or 0)
             if not hwnd or not ctypes.windll.user32.IsWindow(hwnd):
                 return False
             insert_after = -1 if enabled else -2
@@ -100,10 +110,10 @@ class Backend:
             pass
         return False
 
-    def set_native_handle(self, hwnd: int) -> None:
-        self.native_handle = int(hwnd)
+    def _set_native_handle(self, hwnd: int) -> None:
+        self._native_handle = int(hwnd)
 
-    def apply_saved_topmost(self) -> bool:
+    def _apply_saved_topmost(self) -> bool:
         return self._apply_topmost(bool(self.settings["topmost"]))
 
     def set_topmost(self, value: bool) -> dict:
@@ -209,12 +219,12 @@ $selecionada = [PastaModerna]::Escolher('Selecione a pasta de busca', $env:LOCAL
             return result_file.read_text(encoding="utf-8-sig").strip()
 
     def _pywebview_folder_dialog(self, initial: str) -> str:
-        if self.window is None:
+        if self._window is None:
             return ""
         try:
             import webview
 
-            selected = self.window.create_file_dialog(
+            selected = self._window.create_file_dialog(
                 webview.FileDialog.FOLDER,
                 directory=initial if Path(initial).is_dir() else str(Path.home()),
             )
@@ -357,10 +367,10 @@ $selecionada = [PastaModerna]::Escolher('Selecione a pasta de busca', $env:LOCAL
             return {"ok": False, "message": str(exc)}
 
     def minimize(self) -> None:
-        self.window.minimize()
+        self._window.minimize()
 
     def close(self) -> None:
-        self.window.destroy()
+        self._window.destroy()
 
     # ---------------------------------------------------------------- guia Especifica
     FILE_SEARCH_LIMIT = 300
@@ -462,8 +472,8 @@ $selecionada = [PastaModerna]::Escolher('Selecione a pasta de busca', $env:LOCAL
 
     def install_manual_update(self) -> dict:
         result = self.updates.install_manual()
-        if result.get("restarting") and self.window is not None:
-            threading.Timer(.3, self.window.destroy).start()
+        if result.get("restarting") and self._window is not None:
+            threading.Timer(.3, self._window.destroy).start()
         return result
 
     def open_manual_folder(self) -> dict:
@@ -483,5 +493,5 @@ $selecionada = [PastaModerna]::Escolher('Selecione a pasta de busca', $env:LOCAL
     def install_update(self) -> dict:
         result = self.updates.download_and_install()
         if result.get("ok"):
-            threading.Timer(.3, self.window.destroy).start()
+            threading.Timer(.3, self._window.destroy).start()
         return result

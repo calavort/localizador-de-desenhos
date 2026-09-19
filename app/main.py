@@ -6,7 +6,7 @@ import os
 import shutil
 
 from .backend import Backend
-from .instancia import aviso, encerrar_webview_preso, focar_janela_existente, reservar_instancia
+from .instancia import focar_janela_existente, reservar_instancia
 
 
 def main() -> None:
@@ -14,8 +14,9 @@ def main() -> None:
 
     # Duas janelas disputam a mesma pasta do WebView2 e a segunda abre vazia e
     # travada. Em vez de abrir a segunda, traz para a frente a que ja esta la.
-    if not reservar_instancia():
-        focar_janela_existente()
+    # Se nao achar a janela anterior, abre assim mesmo: clicar no atalho e nao
+    # acontecer nada e pior do que arriscar uma segunda janela.
+    if not reservar_instancia() and focar_janela_existente():
         return
 
     root = Path(__file__).resolve().parents[1]
@@ -61,65 +62,40 @@ def main() -> None:
         background_color="#f5f5f5",
         text_select=False,
     )
-    backend.window = window
-    def apply_native_window_settings() -> None:
+    backend._window = window
+
+    def ajustar_janela_ao_aparecer() -> None:
+        """Pega o ``hwnd`` e garante que a janela aparece na frente.
+
+        A moldura e a do Windows: barra de titulo, botoes e tamanho minimo saem
+        do proprio pywebview, a partir de ``min_size`` e do ``icon`` passado ao
+        ``start``. Reescrever isso depois pelo WinForms era o que prendia a
+        janela numa largura unica e apagava o botao de maximizar.
+
+        Sobram duas coisas que so o ``hwnd`` resolve. O "sempre visivel" chama
+        ``SetWindowPos`` por fora da thread da janela. E o ``ShowWindow``: a
+        primeira janela de um processo nasce no estado que quem chamou pediu,
+        entao um atalho antigo gravado como minimizado ou escondido abre o
+        programa atras de tudo - ou nao abre nada na tela.
+        """
         if os.name != "nt":
             return
         try:
-            from System import Action
-            from System.Drawing import Icon, Size
-
-            def assign() -> None:
-                if icon.exists():
-                    native_icon = Icon(str(icon))
-                    window.native.Icon = native_icon
-                    window.native.ShowIcon = True
-                    window._localizador_icon = native_icon
-                locked_width = window.native.Width
-                window.native.MinimumSize = Size(locked_width, 572)
-                window.native.MaximumSize = Size(locked_width, 32767)
-                window.native.MaximizeBox = False
-                handle = window.native.Handle
-                backend.set_native_handle(int(handle.ToInt64()) if hasattr(handle, "ToInt64") else int(handle))
-
-            if window.native.InvokeRequired:
-                window.native.Invoke(Action(assign))
-            else:
-                assign()
-            backend.apply_saved_topmost()
+            handle = window.native.Handle
+            hwnd = int(handle.ToInt64()) if hasattr(handle, "ToInt64") else int(handle)
+            backend._set_native_handle(hwnd)
+            user32 = ctypes.windll.user32
+            user32.ShowWindow(hwnd, 5)  # SW_SHOW
+            user32.SetForegroundWindow(hwnd)
+            backend._apply_saved_topmost()
         except Exception:
             import logging
-            logging.getLogger(__name__).exception("Falha ao configurar a janela nativa")
+            logging.getLogger(__name__).exception("Falha ao preparar a janela")
 
-    window.events.shown += apply_native_window_settings
+    window.events.shown += ajustar_janela_ao_aparecer
 
-    def vigiar_carregamento(janela) -> None:
-        """Janela em branco e travada nao pode ficar sem explicacao.
-
-        Se a pagina nao carregou, o WebView2 nao subiu - na pratica, sobrou um
-        msedgewebview2.exe da execucao anterior segurando a pasta de dados.
-        A varredura so acontece aqui, no caminho de falha, para nao custar
-        nada na abertura normal.
-        """
-        try:
-            if janela.events.loaded.wait(12):
-                return
-        except Exception:
-            return
-        encerrados = encerrar_webview_preso(str(storage))
-        aviso(
-            "A interface nao carregou porque a pasta de dados do WebView2 estava "
-            "em uso por um processo da execucao anterior.\n\n"
-            + (f"Ja encerrei {encerrados} processo(s). " if encerrados else "")
-            + "Abra o Localizador de arquivo novamente."
-        )
-        try:
-            janela.destroy()
-        except Exception:
-            pass
-
-    webview.start(vigiar_carregamento, window, debug=False, private_mode=False,
-                  storage_path=str(storage), icon=str(icon) if icon.exists() else None)
+    webview.start(debug=False, private_mode=False, storage_path=str(storage),
+                  icon=str(icon) if icon.exists() else None)
 
 
 if __name__ == "__main__":
