@@ -6,10 +6,17 @@ import os
 import shutil
 
 from .backend import Backend
+from .instancia import aviso, encerrar_webview_preso, focar_janela_existente, reservar_instancia
 
 
 def main() -> None:
     import webview
+
+    # Duas janelas disputam a mesma pasta do WebView2 e a segunda abre vazia e
+    # travada. Em vez de abrir a segunda, traz para a frente a que ja esta la.
+    if not reservar_instancia():
+        focar_janela_existente()
+        return
 
     root = Path(__file__).resolve().parents[1]
     interface = root / "interface" / "index.html"
@@ -85,7 +92,34 @@ def main() -> None:
             logging.getLogger(__name__).exception("Falha ao configurar a janela nativa")
 
     window.events.shown += apply_native_window_settings
-    webview.start(debug=False, private_mode=False, storage_path=str(storage), icon=str(icon) if icon.exists() else None)
+
+    def vigiar_carregamento(janela) -> None:
+        """Janela em branco e travada nao pode ficar sem explicacao.
+
+        Se a pagina nao carregou, o WebView2 nao subiu - na pratica, sobrou um
+        msedgewebview2.exe da execucao anterior segurando a pasta de dados.
+        A varredura so acontece aqui, no caminho de falha, para nao custar
+        nada na abertura normal.
+        """
+        try:
+            if janela.events.loaded.wait(12):
+                return
+        except Exception:
+            return
+        encerrados = encerrar_webview_preso(str(storage))
+        aviso(
+            "A interface nao carregou porque a pasta de dados do WebView2 estava "
+            "em uso por um processo da execucao anterior.\n\n"
+            + (f"Ja encerrei {encerrados} processo(s). " if encerrados else "")
+            + "Abra o Localizador de arquivo novamente."
+        )
+        try:
+            janela.destroy()
+        except Exception:
+            pass
+
+    webview.start(vigiar_carregamento, window, debug=False, private_mode=False,
+                  storage_path=str(storage), icon=str(icon) if icon.exists() else None)
 
 
 if __name__ == "__main__":

@@ -46,6 +46,7 @@ APP_FILES = (
     "app/main.py",
     "app/backend.py",
     "app/instalador.py",
+    "app/instancia.py",
     "app/search_service.py",
     "app/updater.py",
     "atualizacao/LEIA-ME.txt",
