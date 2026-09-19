@@ -54,7 +54,9 @@ def main() -> None:
     if (root / ".git").exists():
         raise SystemExit("Atualizacao recusada em pasta de desenvolvimento.")
     sys.path.insert(0, str(root))
-    from app.updater import MANIFEST, sha256_file, validate_package
+    from app.updater import (
+        LEGACY_RECORD, RECORD, installed_files, safe_member_name, sha256_file, validate_package,
+    )
 
     if sha256_file(package) != args.sha256:
         raise SystemExit("O pacote mudou depois da validacao SHA-256.")
@@ -64,6 +66,9 @@ def main() -> None:
     manifest = validate_package(package, info, args.version)
     antes_requisitos = (root / "requirements.txt").read_bytes()
     files = tuple(sorted(manifest["files"]))
+    # O que a instalacao anterior gravou e esta versao nao traz mais sai de
+    # cena; sem isso um arquivo que mudou de pasta ficaria nos dois lugares.
+    obsoletos = tuple(sorted(set(installed_files(root)) - set(files)))
     launcher = str(info.get("launcher") or "Localizador_Desenhos.pyw")
     state = root / ".atualizacoes"
     stage = state / "preparado"
@@ -83,29 +88,43 @@ def main() -> None:
             with archive.open(name) as source, target.open("wb") as output:
                 shutil.copyfileobj(source, output)
 
-    for name in files:
+    for name in files + obsoletos:
         source = root / name
         if source.is_file():
             saved = backup / name
             saved.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, saved)
 
-    journal.write_text(json.dumps({"version": args.version, "files": files}, indent=2), encoding="utf-8")
+    journal.write_text(
+        json.dumps({"version": args.version, "files": files, "obsoletos": obsoletos}, indent=2),
+        encoding="utf-8",
+    )
     replaced: list[str] = []
+    removidos: list[str] = []
     try:
         for name in files:
             target = root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             os.replace(stage / name, target)
             replaced.append(name)
-        (root / MANIFEST).write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        for name in obsoletos:
+            alvo = root / safe_member_name(name)
+            if alvo.is_file():
+                alvo.unlink()
+                removidos.append(name)
+        (state / RECORD).write_text(
+            json.dumps({"version": args.version, "files": files}, indent=2), encoding="utf-8"
+        )
+        # O registro morava na raiz ate a versao 1.6.0.
+        (root / LEGACY_RECORD).unlink(missing_ok=True)
     except Exception:
-        for name in reversed(replaced):
+        for name in reversed(replaced + removidos):
             target = root / name
             saved = backup / name
             if saved.is_file():
+                target.parent.mkdir(parents=True, exist_ok=True)
                 os.replace(saved, target)
-            else:
+            elif name in replaced:
                 target.unlink(missing_ok=True)
         launch(root, launcher)
         raise
@@ -116,6 +135,11 @@ def main() -> None:
             estado = install_requirements(root)
             estado["version"] = args.version
             (state / "bibliotecas.json").write_text(json.dumps(estado), encoding="utf-8")
+        for name in removidos:  # pasta que ficou vazia depois da limpeza
+            pasta = (root / name).parent
+            while pasta != root and pasta.is_dir() and not any(pasta.iterdir()):
+                pasta.rmdir()
+                pasta = pasta.parent
         journal.unlink(missing_ok=True)
         shutil.rmtree(stage, ignore_errors=True)
         shutil.rmtree(backup, ignore_errors=True)

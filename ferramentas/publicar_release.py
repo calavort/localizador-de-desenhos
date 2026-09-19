@@ -1,7 +1,17 @@
+"""Monta o pacote do Localizador de arquivo e, se pedido, publica no GitHub.
+
+    py -3 ferramentas/publicar_release.py --versao 1.7.0
+    py -3 ferramentas/publicar_release.py --versao 1.7.0 --notas NOTAS.md --publicar
+
+Sem ``--publicar`` o script so grava o ZIP e o ``.sha256`` em ``release``, para
+conferencia ou instalacao manual.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -10,13 +20,61 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.updater import PACKAGE_PREFIX, UpdateError, sha256_file, version_key  # noqa: E402
-from gerar_pacote_release import build_package  # noqa: E402
+from app.updater import (  # noqa: E402
+    APP_FILES, APP_ID, MANIFEST, PACKAGE_PREFIX, UpdateError, sha256_file, version_key,
+)
+
+
+def build_package(root: Path, version: str | None = None, output_dir: Path | None = None) -> Path:
+    """Empacota os arquivos da versao com um manifesto de hash por arquivo."""
+    info_path = root / "versao.json"
+    info = json.loads(info_path.read_text(encoding="utf-8"))
+    if info.get("app_id") != APP_ID:
+        raise UpdateError("app_id diferente do esperado.")
+    current = str(info["version"])
+    version = version or current
+    if version_key(version) < version_key(current):
+        raise UpdateError("A nova versao nao pode ser menor que a atual.")
+    if not info.get("repository"):
+        raise UpdateError("Configure o repositorio em versao.json.")
+    info["version"] = version
+    payloads: dict[str, bytes] = {}
+    for name in APP_FILES:
+        path = root / name
+        if path.is_symlink() or not path.is_file():
+            raise UpdateError(f"Arquivo obrigatorio ausente ou invalido: {name}")
+        payloads[name] = path.read_bytes()
+        if name.endswith((".py", ".pyw")):
+            compile(payloads[name], name, "exec")
+    payloads["versao.json"] = json.dumps(info, ensure_ascii=True, indent=2).encode("utf-8")
+    manifest = {
+        "schema": 1,
+        "app_id": APP_ID,
+        "version": version,
+        "repository": info["repository"],
+        "python_min": [3, 11],
+        "files": {name: hashlib.sha256(data).hexdigest() for name, data in payloads.items()},
+    }
+    output_dir = output_dir or root / "release"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    archive = output_dir / f"{PACKAGE_PREFIX}-{version}.zip"
+    temporary = archive.with_suffix(".zip.tmp")
+    with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as package:
+        for name, data in payloads.items():
+            package.writestr(name, data)
+        package.writestr(MANIFEST, json.dumps(manifest, indent=2))
+    os.replace(temporary, archive)
+    archive.with_suffix(".zip.sha256").write_text(
+        f"{sha256_file(archive)}  {archive.name}\n", encoding="ascii"
+    )
+    info_path.write_text(json.dumps(info, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return archive
 
 
 def github_token() -> str:
@@ -125,7 +183,7 @@ def publish(archive: Path, create_repository: bool, notes: str) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Gera e publica uma versao no GitHub Releases.")
-    parser.add_argument("--versao", required=True, help="Nova versao, por exemplo 1.0.3")
+    parser.add_argument("--versao", help="Nova versao, por exemplo 1.7.0; sem ela, reempacota a atual")
     parser.add_argument("--notas", type=Path, help="Arquivo Markdown com notas da versao")
     parser.add_argument("--publicar", action="store_true", help="Publica o pacote no GitHub")
     parser.add_argument("--criar-repositorio", action="store_true", help="Cria o repositorio publico se estiver ausente")

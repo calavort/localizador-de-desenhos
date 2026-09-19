@@ -1,5 +1,5 @@
-LOCALIZADOR DE ARQUIVO - v1.0.2
-================================
+LOCALIZADOR DE ARQUIVO
+======================
 
 OBJETIVO
 Localiza um desenho pela identificacao completa ou apenas pelo numero e abre o
@@ -18,8 +18,6 @@ Execute "Instalar no Menu Iniciar.bat". Nao exige administrador.
 O atalho abre diretamente pelo pythonw.exe, sem console, com o icone aprovado.
 O instalador atualiza o atalho existente. Se mover a pasta, execute-o novamente.
 O icone aprovado tambem aparece no cabecalho e na janela/barra de tarefas.
-Para atualizar, feche o programa e extraia este ZIP na mesma pasta,
-substituindo os arquivos. A pasta de desenhos salva e preservada.
 
 BUSCA
 - IME-MC-1-44364 e 44364 encontram o mesmo projeto.
@@ -36,10 +34,21 @@ rollback. Cada release deve conter:
 - Localizador_de_Desenhos-X.Y.Z.zip
 - Localizador_de_Desenhos-X.Y.Z.zip.sha256
 
-Consulte GUIA_ATUALIZACAO.md. Para preparar e publicar uma versao:
-python ferramentas\publicar_release.py --versao X.Y.Z --publicar --criar-repositorio
+O programa verifica sozinho e instala pela guia ATUALIZACAO; a pasta de
+desenhos salva e as configuracoes sao preservadas. Para instalar na mao,
+deixe o ZIP da versao nova na pasta "atualizacao" e abra o programa.
+
+Consulte ferramentas\GUIA_ATUALIZACAO.md. Para preparar e publicar:
+python ferramentas\publicar_release.py --versao X.Y.Z --publicar
 
 REQUISITOS
 - Windows 10 ou 11
 - Python 3.11 ou superior
 - Microsoft Edge WebView2 (normalmente ja instalado no Windows)
+
+ORGANIZACAO DA PASTA
+app\             codigo do programa, inclusive o instalador da atualizacao
+interface\       tela HTML e icones
+atualizacao\     onde deixar o ZIP para instalar na mao (veja o LEIA-ME)
+ferramentas\     uso do desenvolvedor: publicar versao e guia de release
+release\         pacotes gerados aqui (nao vai para o repositorio)

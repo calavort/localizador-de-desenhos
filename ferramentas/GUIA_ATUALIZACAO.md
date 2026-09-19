@@ -1,7 +1,6 @@
 # Atualização pelo GitHub Releases
 
-O canal do programa é `calavort/localizador-de-desenhos`. O repositório ainda
-precisa ser criado/publicado na primeira versão.
+O canal do programa é `calavort/localizador-de-desenhos`.
 
 ## Preparar uma versão
 
@@ -18,7 +17,7 @@ manifesto com o hash de cada arquivo.
 
 Com o GitHub autenticado neste computador, execute:
 
-`python ferramentas\publicar_release.py --versao 1.0.3 --publicar --criar-repositorio`
+`python ferramentas\publicar_release.py --versao X.Y.Z --publicar --criar-repositorio`
 
 Nas publicações seguintes, omita `--criar-repositorio`. Para incluir notas:
 
@@ -30,7 +29,8 @@ O publicador mantém o release como rascunho até conferir os dois arquivos.
 
 - download somente por HTTPS;
 - SHA-256 do ZIP e hashes individuais do manifesto;
-- bloqueio de caminhos inseguros, links e arquivos não autorizados;
+- bloqueio de caminhos inseguros, links, nomes reservados e pastas fundas;
+- remoção do que a versão nova não traz mais, pelo registro da instalação;
 - limite de quantidade e tamanho dos arquivos;
 - recusa de atualização automática dentro de uma pasta `.git`;
 - recusa automática quando `requirements.txt` mudar;

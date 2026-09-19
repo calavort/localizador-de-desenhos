@@ -16,32 +16,45 @@ import zipfile
 APP_ID = "calavort.localizador-desenhos"
 PACKAGE_PREFIX = "Localizador_de_Desenhos"
 MANIFEST = "manifesto-release.json"
+STATE_DIR = ".atualizacoes"
+RECORD = "instalado.json"  # registro local do que a ultima instalacao gravou
+LEGACY_RECORD = "manifesto-release.json"  # o mesmo registro, antes na raiz
 MAX_PACKAGE = 80 * 1024 * 1024
 MAX_EXPANDED = 160 * 1024 * 1024
 MAX_FILES = 200
+MAX_DEPTH = 4
+MAX_NAME = 180
+# Sublinhado no inicio e valido (__init__.py); ponto no inicio nao, para nao
+# deixar passar arquivo oculto nem "." / "..".
+SEGMENT = re.compile(r"[A-Za-z0-9_][A-Za-z0-9 ._-]*")
+RESERVED_NAMES = frozenset(
+    {"CON", "PRN", "AUX", "NUL"}
+    | {f"COM{n}" for n in range(1, 10)}
+    | {f"LPT{n}" for n in range(1, 10)}
+)
+# Lista desta versao: e o que o publicador empacota e o que se assume ter
+# sido instalado quando ainda nao existe registro de uma instalacao anterior.
 APP_FILES = (
     "Localizador_Desenhos.pyw",
-    "instalador.py",
     "versao.json",
     "requirements.txt",
     "README.txt",
     "Instalar Bibliotecas.bat",
     "Iniciar Localizador.bat",
-    "Adicionar ao Menu Iniciar.ps1",
     "Instalar no Menu Iniciar.bat",
     "app/__init__.py",
     "app/main.py",
     "app/backend.py",
+    "app/instalador.py",
     "app/search_service.py",
     "app/updater.py",
+    "atualizacao/LEIA-ME.txt",
+    "ferramentas/publicar_release.py",
+    "ferramentas/GUIA_ATUALIZACAO.md",
     "interface/index.html",
     "interface/localizador.ico",
-    "interface/localizador.svg",
     "interface/localizador.png",
-    "atualizacao/LEIA-ME.txt",
-    "gerar_pacote_release.py",
-    "ferramentas/publicar_release.py",
-    "GUIA_ATUALIZACAO.md",
+    "interface/localizador.svg",
 )
 
 
@@ -66,15 +79,48 @@ def sha256_file(path: Path) -> str:
 
 
 def safe_member_name(value: str) -> str:
-    if not isinstance(value, str) or not value or "\\" in value or ":" in value:
+    """Aprova o caminho pela forma, e nao por uma lista fixa de nomes.
+
+    A lista fixa travava a organizacao das pastas: quem instalou a versao
+    antiga e quem valida o pacote novo, entao qualquer arquivo renomeado ou
+    movido era recusado como "nao permitido". O que protegia continua valendo
+    - nada de caminho absoluto, unidade, "..", link ou nome reservado do
+    Windows - e a lista de arquivos passa a vir do manifesto, ja conferido
+    por hash.
+    """
+    if not isinstance(value, str) or not value or len(value) > MAX_NAME:
+        raise UpdateError("O pacote contem um nome de arquivo invalido.")
+    if value != value.strip() or "\\" in value or ":" in value:
         raise UpdateError("O pacote contem um nome de arquivo invalido.")
     path = PurePosixPath(value)
-    if path.is_absolute() or any(part in ("", ".", "..") for part in path.parts):
+    if path.is_absolute() or not 1 <= len(path.parts) <= MAX_DEPTH:
         raise UpdateError("O pacote contem um caminho inseguro.")
-    normalized = path.as_posix()
-    if normalized not in set(APP_FILES) | {MANIFEST}:
-        raise UpdateError(f"Arquivo nao permitido no pacote: {normalized}")
-    return normalized
+    for part in path.parts:
+        if part in ("", ".", "..") or part.endswith((" ", ".")):
+            raise UpdateError("O pacote contem um caminho inseguro.")
+        if not SEGMENT.fullmatch(part):
+            raise UpdateError(f"Nome de arquivo invalido no pacote: {value}")
+        if part.split(".")[0].upper() in RESERVED_NAMES:
+            raise UpdateError(f"Nome reservado pelo Windows no pacote: {value}")
+    return path.as_posix()
+
+
+def installed_files(root: Path) -> tuple[str, ...]:
+    """Arquivos gravados pela ultima instalacao.
+
+    E o que permite apagar o que a versao nova nao traz mais: sem esse
+    registro, um arquivo removido ou movido de pasta sobrevive para sempre na
+    instalacao do usuario. Antes da primeira instalacao feita por este codigo
+    nao ha registro, e a lista desta versao e a aposta certa.
+    """
+    registro = root / STATE_DIR / RECORD
+    try:
+        nomes = json.loads(registro.read_text(encoding="utf-8"))["files"]
+        if isinstance(nomes, list) and 1 <= len(nomes) <= MAX_FILES:
+            return tuple(safe_member_name(nome) for nome in nomes)
+    except (OSError, ValueError, KeyError, TypeError, UpdateError):
+        pass
+    return APP_FILES
 
 
 def validate_package(package: Path, info: dict, expected_version: str) -> dict:
@@ -270,7 +316,7 @@ class UpdateService:
             digest = sha256_file(destino)
 
             instalador = estado / "instalador.py"
-            shutil.copy2(self.root / "instalador.py", instalador)
+            shutil.copy2(self.root / "app" / "instalador.py", instalador)
             subprocess.Popen(
                 [sys.executable, str(instalador), "--root", str(self.root), "--package", str(destino),
                  "--sha256", digest, "--version", versao],
@@ -326,7 +372,7 @@ class UpdateService:
                 raise UpdateError("Falha na verificacao SHA-256. Nenhum arquivo foi alterado.")
             validate_package(package, self.version_info, latest)
             installer = state / "instalador.py"
-            shutil.copy2(self.root / "instalador.py", installer)
+            shutil.copy2(self.root / "app" / "instalador.py", installer)
             creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
             subprocess.Popen(
                 [sys.executable, str(installer), "--root", str(self.root), "--package", str(package), "--sha256", digest, "--version", latest],
